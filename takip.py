@@ -3,9 +3,10 @@ import time
 import requests
 from urllib.parse import quote
 
-SUPABASE_URL = "https://uwxfrbljvmwtxecnqgrl.supabase.co"
-SUPABASE_KEY = "sb_publishable_L567-kgj8bZmK6uhMABbkA_VwhqrGCn"
-RESEND_KEY = "re_4Q6m5BmF_BibZvq3izfs193Huzhy2tj26"
+import os
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_L567-kgj8bZmK6uhMABbkA_VwhqrGCn")
+RESEND_KEY = os.environ.get("RESEND_KEY", "re_4Q6m5BmF_BibZvq3izfs193Huzhy2tj26")
 
 def fiyat_cek(url):
     with sync_playwright() as p:
