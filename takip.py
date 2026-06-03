@@ -2,8 +2,8 @@ from playwright.sync_api import sync_playwright
 import time
 import requests
 from urllib.parse import quote
-
 import os
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_L567-kgj8bZmK6uhMABbkA_VwhqrGCn")
 RESEND_KEY = os.environ.get("RESEND_KEY", "re_4Q6m5BmF_BibZvq3izfs193Huzhy2tj26")
@@ -31,7 +31,6 @@ def fiyat_getir(url):
     }
     r = requests.get(f"{SUPABASE_URL}/rest/v1/urunler?select=son_fiyat", headers=headers)
     data = r.json()
-    print("Veritabanından gelen:", data)
     if data and len(data) > 0:
         return data[0]["son_fiyat"]
     return None
@@ -52,39 +51,28 @@ def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
     data = {
         "from": "onboarding@resend.dev",
         "to": email,
-        "subject": f"🎉 {urun_adi} fiyatı düştü!",
-        "html": f"""
-        <h2>Fiyat Düşüş Bildirimi</h2>
-        <p><b>{urun_adi}</b> ürününde fiyat düşüşü tespit edildi!</p>
-        <p>Eski fiyat: <s>{eski_fiyat}</s></p>
-        <p>Yeni fiyat: <b style='color:green'>{yeni_fiyat}</b></p>
-        <a href='{url}' style='background:orange;color:white;padding:10px 20px;text-decoration:none;border-radius:5px'>
-            Ürüne Git →
-        </a>
-        """
+        "subject": f"Fiyat dustu: {urun_adi}",
+        "html": f"<h2>Fiyat Dusus Bildirimi</h2><p><b>{urun_adi}</b> urununde fiyat dususu tespit edildi!</p><p>Eski fiyat: <s>{eski_fiyat}</s></p><p>Yeni fiyat: <b style='color:green'>{yeni_fiyat}</b></p><a href='{url}' style='background:orange;color:white;padding:10px 20px;text-decoration:none;border-radius:5px'>Urun sayfasina git</a>"
     }
     r = requests.post("https://api.resend.com/emails", json=data, headers=headers)
     if r.status_code == 200:
-        print("✓ E-posta gönderildi!")
+        print("Email gonderildi!")
     else:
-        print("E-posta hatası:", r.text)
+        print("Email hatasi:", r.text)
 
 def kontrol_et(url, urun_adi, email):
     print(f"Kontrol ediliyor: {urun_adi}")
     yeni_fiyat = fiyat_cek(url)
     if not yeni_fiyat:
-        print("Fiyat çekilemedi.")
+        print("Fiyat cekilemedi.")
         return
-
     eski_fiyat = fiyat_getir(url)
-    print(f"Eski: {eski_fiyat} → Yeni: {yeni_fiyat}")
-
+    print(f"Eski: {eski_fiyat} - Yeni: {yeni_fiyat}")
     if eski_fiyat and eski_fiyat != yeni_fiyat:
-        print("💰 Fiyat değişti! E-posta gönderiliyor...")
+        print("Fiyat degisti! Email gonderiliyor...")
         email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
     else:
-        print("Fiyat değişmedi.")
-
+        print("Fiyat degismedi.")
     fiyat_guncelle(url, yeni_fiyat)
 
 urunler = [
