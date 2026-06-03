@@ -1,8 +1,8 @@
 from playwright.sync_api import sync_playwright
 import time
 import requests
-from urllib.parse import quote
 import os
+import json
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_L567-kgj8bZmK6uhMABbkA_VwhqrGCn")
@@ -19,61 +19,64 @@ def fiyat_cek(url):
         time.sleep(8)
         try:
             fiyat = page.locator(".new-price").first.inner_text()
+            fiyat = fiyat.encode("ascii", "ignore").decode("ascii")
         except:
             fiyat = None
         browser.close()
         return fiyat
 
-def fiyat_getir(url):
+def fiyat_getir():
     headers = {
         "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}"
+        "Authorization": "Bearer " + SUPABASE_KEY
     }
-    r = requests.get(f"{SUPABASE_URL}/rest/v1/urunler?select=son_fiyat", headers=headers)
+    r = requests.get(SUPABASE_URL + "/rest/v1/urunler?select=son_fiyat", headers=headers)
     data = r.json()
     if data and len(data) > 0:
         return data[0]["son_fiyat"]
     return None
 
-def fiyat_guncelle(url, yeni_fiyat):
+def fiyat_guncelle(yeni_fiyat):
     headers = {
         "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Authorization": "Bearer " + SUPABASE_KEY,
         "Content-Type": "application/json"
     }
-    requests.patch(f"{SUPABASE_URL}/rest/v1/urunler?url=eq.{quote(url, safe='')}", json={"son_fiyat": yeni_fiyat}, headers=headers)
+    payload = json.dumps({"son_fiyat": yeni_fiyat})
+    requests.patch(SUPABASE_URL + "/rest/v1/urunler?id=eq.1", data=payload.encode("utf-8"), headers=headers)
 
 def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
     headers = {
-        "Authorization": f"Bearer {RESEND_KEY}",
+        "Authorization": "Bearer " + RESEND_KEY,
         "Content-Type": "application/json"
     }
-    data = {
+    html = "<h2>Fiyat Dusus</h2><p>" + urun_adi + " urununde fiyat degisti!</p><p>Eski: " + eski_fiyat + "</p><p>Yeni: " + yeni_fiyat + "</p><a href='" + url + "'>Urune Git</a>"
+    payload = json.dumps({
         "from": "onboarding@resend.dev",
         "to": email,
-        "subject": f"Fiyat dustu: {urun_adi}",
-        "html": f"<h2>Fiyat Dusus Bildirimi</h2><p><b>{urun_adi}</b> urununde fiyat dususu tespit edildi!</p><p>Eski fiyat: <s>{eski_fiyat}</s></p><p>Yeni fiyat: <b style='color:green'>{yeni_fiyat}</b></p><a href='{url}' style='background:orange;color:white;padding:10px 20px;text-decoration:none;border-radius:5px'>Urun sayfasina git</a>"
-    }
-    r = requests.post("https://api.resend.com/emails", json=data, headers=headers)
+        "subject": "Fiyat dustu: " + urun_adi,
+        "html": html
+    })
+    r = requests.post("https://api.resend.com/emails", data=payload.encode("utf-8"), headers=headers)
     if r.status_code == 200:
         print("Email gonderildi!")
     else:
-        print("Email hatasi:", r.text)
+        print("Email hatasi:", r.status_code)
 
 def kontrol_et(url, urun_adi, email):
-    print(f"Kontrol ediliyor: {urun_adi}")
+    print("Kontrol ediliyor: " + urun_adi)
     yeni_fiyat = fiyat_cek(url)
     if not yeni_fiyat:
         print("Fiyat cekilemedi.")
         return
-    eski_fiyat = fiyat_getir(url)
-    print(f"Eski: {eski_fiyat} - Yeni: {yeni_fiyat}")
+    eski_fiyat = fiyat_getir()
+    print("Eski: " + str(eski_fiyat) + " - Yeni: " + str(yeni_fiyat))
     if eski_fiyat and eski_fiyat != yeni_fiyat:
-        print("Fiyat degisti! Email gonderiliyor...")
+        print("Fiyat degisti!")
         email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
     else:
         print("Fiyat degismedi.")
-    fiyat_guncelle(url, yeni_fiyat)
+    fiyat_guncelle(yeni_fiyat)
 
 urunler = [
     {
