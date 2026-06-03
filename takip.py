@@ -77,7 +77,7 @@ def kontrol_et(url, urun_adi, email):
 
 urunler = [
     {
-        "url": "https://www.trendyol.com/kron/tx-75-28-trekking-19-21-vites-m-disc-mat-gri-gri-siyah-mavi-p-772835371?boutiqueId=61&merchantId=328124",
+        "url": "https://www.trendyol.com/kron/tx-75-p-772835371",
         "urun_adi": "Kron TX 75 Bisiklet",
         "email": "aykutkadiruzun@gmail.com"
     }
