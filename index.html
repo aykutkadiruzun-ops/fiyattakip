@@ -26,7 +26,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .field label { font-size: 12px; color: #666; display: block; margin-bottom: 5px; }
 .field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fafafa; color: #1a1a2e; font-family: inherit; }
 .field input:focus, .field select:focus { outline: none; border-color: #534AB7; box-shadow: 0 0 0 3px #EEEDFE; background: white; }
-.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .submit-btn { width: 100%; padding: 12px; background: #534AB7; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; }
 .submit-btn:hover { background: #3C3489; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
@@ -87,6 +87,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="field">
           <label>E-posta</label>
           <input type="email" id="input-email" placeholder="ornek@gmail.com" />
+        </div>
+        <div class="field">
+          <label>Hedef Fiyat (TL)</label>
+          <input type="number" id="input-hedef" placeholder="499" min="0" />
         </div>
         <div class="field">
           <label>Kategori</label>
@@ -218,7 +222,8 @@ async function takipeAl() {
   var btn = document.querySelector('.submit-btn');
   btn.disabled = true;
   btn.textContent = 'Kaydediliyor...';
-  var { error } = await _sb.from('urunler').insert([{ url: url, email: email }]);
+ var hedef = document.getElementById('input-hedef').value;
+var { error } = await _sb.from('urunler').insert([{ url: url, email: email, hedef_fiyat: hedef ? parseFloat(hedef) : null }]);
   btn.disabled = false;
   btn.textContent = 'Takibe Al';
   if (error) {
