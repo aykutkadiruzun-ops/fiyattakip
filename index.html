@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/dilac/Downloads/index_2.html -->
+<!-- saved from url=(0045)file:///C:/Users/dilac/Downloads/index_3.html -->
 <html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -62,7 +62,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <body>
 <div class="app">
   <nav class="nav">
-    <a href="file:///C:/Users/dilac/Downloads/index_2.html#" class="logo" onclick="showPage(&#39;home&#39;)">
+    <a href="file:///C:/Users/dilac/Downloads/index_3.html#" class="logo" onclick="showPage(&#39;home&#39;)">
       <div class="logo-icon"><i class="ti ti-bell-ringing" style="color:white;font-size:16px"></i></div>
       Droppy
     </a>
@@ -184,6 +184,7 @@ function showPage(name) {
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'products') loadProducts(currentFilter);
 }
 
 async function takipeAl() {
@@ -219,43 +220,68 @@ async function takipeAl() {
   var msg = document.getElementById('success-msg');
   msg.style.display = 'block';
   setTimeout(function(){ msg.style.display = 'none'; }, 3000);
-  updateStats();
-  renderProducts();
-  updateCounts();
+  loadProducts(null);
 }
 
-function updateStats() {
-  document.getElementById('stat-total').textContent = products.length;
-}
+function updateStats() { /* handled by loadProducts */ }
 
-function renderProducts(filter) {
+var currentFilter = null;
+
+async function loadProducts(filter) {
+  currentFilter = filter || null;
   var list = document.getElementById('product-list');
-  var filtered = filter ? products.filter(function(p){ return p.cat === filter; }) : products;
-  if (filtered.length === 0) {
+  list.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#aaa;font-size:13px">Yukleniyor...</div>';
+
+  var query = _sb.from('urunler').select('*').order('id', { ascending: false });
+  var { data, error } = await query;
+
+  if (error || !data || data.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#888;font-size:14px">Henuz urun eklemediniz.</div>';
+    document.getElementById('stat-total').textContent = 0;
     return;
   }
+
+  var filtered = currentFilter ? data.filter(function(p){ return p.kategori === currentFilter; }) : data;
+  document.getElementById('stat-total').textContent = data.length;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#888;font-size:14px">Bu kategoride urun yok.</div>';
+    return;
+  }
+
   var html = '';
-  filtered.forEach(function(p, i) {
-    html += '<div class="product-card" data-cat="' + p.cat + '">' +
+  filtered.forEach(function(p) {
+    var site = 'Diger';
+    if (p.url && p.url.includes('trendyol')) site = 'Trendyol';
+    else if (p.url && p.url.includes('hepsiburada')) site = 'Hepsiburada';
+    else if (p.url && p.url.includes('amazon')) site = 'Amazon';
+    var name = p.urun_adi || (site + ' urunu');
+    var fiyat = p.son_fiyat || 'Bekleniyor';
+    html += '<div class="product-card" data-id="' + p.id + '">' +
       '<div class="product-info">' +
-      '<div class="product-name">' + p.name + '</div>' +
-      '<div class="product-meta"><span class="cat-badge">' + p.cat + '</span><span class="product-site">' + p.site + '</span></div>' +
+      '<div class="product-name">' + name + '</div>' +
+      '<div class="product-meta"><span class="cat-badge">' + site + '</span><span class="product-site">' + p.email + '</span></div>' +
       '</div>' +
-      '<div class="product-price"><div class="price-current">' + p.fiyat + '</div></div>' +
+      '<div class="product-price"><div class="price-current">' + fiyat + '</div></div>' +
       '<div class="product-actions">' +
       '<a href="' + p.url + '" target="_blank" class="icon-btn"><i class="ti ti-external-link" style="font-size:14px"></i></a>' +
-      '<button class="icon-btn" onclick="sil(' + i + ')"><i class="ti ti-trash" style="font-size:14px"></i></button>' +
+      '<button class="icon-btn" onclick="sil(' + p.id + ', this)"><i class="ti ti-trash" style="font-size:14px"></i></button>' +
       '</div></div>';
   });
   list.innerHTML = html;
+  updateCounts(data);
 }
 
-function sil(i) {
-  products.splice(i, 1);
-  updateStats();
-  renderProducts();
-  updateCounts();
+function renderProducts(filter) {
+  loadProducts(filter);
+}
+
+async function sil(id, btn) {
+  if (!confirm('Bu urunu takipten cikar?')) return;
+  btn.disabled = true;
+  var { error } = await _sb.from('urunler').delete().eq('id', id);
+  if (error) { alert('Silinemedi: ' + error.message); btn.disabled = false; return; }
+  loadProducts(currentFilter);
 }
 
 function filterProducts(btn, cat) {
@@ -264,15 +290,9 @@ function filterProducts(btn, cat) {
   renderProducts(cat === 'all' ? null : cat);
 }
 
-function updateCounts() {
-  var cats = ['Giyim','Elektronik','Aksesuar','Spor','Diger'];
-  cats.forEach(function(c) {
-    var count = products.filter(function(p){ return p.cat === c; }).length;
-    var el = document.getElementById('count-' + c);
-    if (el) el.textContent = count + ' urun';
-  });
-  var ev = products.filter(function(p){ return p.cat === 'Ev & Yasam'; }).length;
-  document.getElementById('count-EV').textContent = ev + ' urun';
+function updateCounts(data) {
+  if (!data) return;
+  document.getElementById('stat-total').textContent = data.length;
 }
 
 function goCategory(cat) {
