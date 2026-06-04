@@ -51,64 +51,131 @@ def fiyat_cek(url):
         browser.close()
         return fiyat
 
-def fiyat_getir():
+def urunleri_getir():
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": "Bearer " + SUPABASE_KEY
     }
-    data = http_get(SUPABASE_URL + "/rest/v1/urunler?select=son_fiyat", headers)
-    if data and len(data) > 0:
-        return data[0]["son_fiyat"]
-    return None
+    return http_get(SUPABASE_URL + "/rest/v1/urunler?select=*", headers)
 
-def fiyat_guncelle(yeni_fiyat):
+def fiyat_guncelle(urun_id, yeni_fiyat, urun_adi):
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": "Bearer " + SUPABASE_KEY,
         "Content-Type": "application/json"
     }
-    http_patch(SUPABASE_URL + "/rest/v1/urunler?id=eq.1", headers, {"son_fiyat": yeni_fiyat})
+    data = {"son_fiyat": yeni_fiyat}
+    if urun_adi:
+        data["urun_adi"] = urun_adi
+    http_patch(
+        SUPABASE_URL + "/rest/v1/urunler?id=eq." + str(urun_id),
+        headers,
+        data
+    )
+
+def gecmise_kaydet(urun_id, fiyat):
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json"
+    }
+    http_post(
+        SUPABASE_URL + "/rest/v1/fiyat_gecmisi",
+        headers,
+        {"urun_id": urun_id, "fiyat": fiyat}
+    )
+
+def urun_adi_cek(page):
+    try:
+        return page.locator("h1.pr-new-br span").first.inner_text().strip()
+    except:
+        try:
+            return page.locator("h1").first.inner_text().strip()
+        except:
+            return None
 
 def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
     headers = {
         "Authorization": "Bearer " + RESEND_KEY,
         "Content-Type": "application/json"
     }
-    html = "<h2>Fiyat Dusus</h2><p>" + urun_adi + " fiyati degisti!</p><p>Eski: " + eski_fiyat + "</p><p>Yeni: " + yeni_fiyat + "</p><a href='" + url + "'>Urune Git</a>"
+    html = (
+        "<h2>💸 Fiyat Dustu!</h2>"
+        "<p><b>" + (urun_adi or "Urun") + "</b> fiyati degisti!</p>"
+        "<p>Eski fiyat: <s>" + str(eski_fiyat) + "</s></p>"
+        "<p>Yeni fiyat: <b style='color:green'>" + str(yeni_fiyat) + "</b></p>"
+        "<a href='" + url + "' style='background:#534AB7;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Urune Git</a>"
+    )
     data = {
         "from": "onboarding@resend.dev",
         "to": email,
-        "subject": "Fiyat dustu: " + urun_adi,
+        "subject": "Fiyat dustu: " + (urun_adi or "Urun"),
         "html": html
     }
     status = http_post("https://api.resend.com/emails", headers, data)
-    if status == 200:
-        print("Email gonderildi!")
-    else:
-        print("Email durumu:", status)
+    print("Email durumu:", status)
 
-def kontrol_et(url, urun_adi, email):
-    print("Kontrol ediliyor: " + urun_adi)
-    yeni_fiyat = fiyat_cek(url)
+def kontrol_et(urun):
+    urun_id = urun["id"]
+    url = urun["url"]
+    email = urun["email"]
+    eski_fiyat = urun.get("son_fiyat")
+    urun_adi = urun.get("urun_adi") or url
+
+    print("Kontrol ediliyor:", url)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        page = context.new_page()
+        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        time.sleep(8)
+
+        # Fiyat cek
+        yeni_fiyat = None
+        try:
+            yeni_fiyat = page.locator(".new-price").first.inner_text().strip()
+        except:
+            pass
+
+        # Urun adi cek (ilk kontrolde)
+        if not urun.get("urun_adi"):
+            try:
+                urun_adi = page.locator("h1.pr-new-br span").first.inner_text().strip()
+            except:
+                try:
+                    urun_adi = page.locator("h1").first.inner_text().strip()
+                except:
+                    urun_adi = None
+
+        browser.close()
+
     if not yeni_fiyat:
-        print("Fiyat cekilemedi.")
+        print("Fiyat cekilemedi:", url)
         return
-    eski_fiyat = fiyat_getir()
-    print("Eski: " + str(eski_fiyat) + " - Yeni: " + str(yeni_fiyat))
+
+    print("Eski:", eski_fiyat, "-> Yeni:", yeni_fiyat)
+
+    # Fiyat gecmisine kaydet
+    gecmise_kaydet(urun_id, yeni_fiyat)
+
+    # Supabase guncelle
+    fiyat_guncelle(urun_id, yeni_fiyat, urun_adi)
+
+    # Fiyat dustuyse email gonder
     if eski_fiyat and eski_fiyat != yeni_fiyat:
-        print("Fiyat degisti!")
+        print("Fiyat degisti! Email gonderiliyor...")
         email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
     else:
         print("Fiyat degismedi.")
-    fiyat_guncelle(yeni_fiyat)
 
-urunler = [
-    {
-        "url": "https://www.trendyol.com/kron/tx-75-p-772835371",
-        "urun_adi": "Kron TX 75 Bisiklet",
-        "email": "aykutkadiruzun@gmail.com"
-    }
-]
-
+# Tum urunleri Supabase'den cek ve kontrol et
+urunler = urunleri_getir()
+print(f"{len(urunler)} urun bulundu.")
 for urun in urunler:
-    kontrol_et(urun["url"], urun["urun_adi"], urun["email"])
+    try:
+        kontrol_et(urun)
+    except Exception as e:
+        print("Hata:", urun.get("url"), "-", e)
