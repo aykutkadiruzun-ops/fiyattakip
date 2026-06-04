@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0045)file:///C:/Users/dilac/Downloads/index_2.html -->
+<html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Droppy — Fiyat Takip</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link rel="stylesheet" href="./Droppy — Fiyat Takip_files/tabler-icons.min.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f7ff; color: #1a1a2e; }
@@ -62,14 +62,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <body>
 <div class="app">
   <nav class="nav">
-    <a href="#" class="logo" onclick="showPage('home')">
+    <a href="file:///C:/Users/dilac/Downloads/index_2.html#" class="logo" onclick="showPage(&#39;home&#39;)">
       <div class="logo-icon"><i class="ti ti-bell-ringing" style="color:white;font-size:16px"></i></div>
       Droppy
     </a>
     <div class="nav-tabs">
-      <button class="nav-tab active" id="tab-home" onclick="showPage('home')">Anasayfa</button>
-      <button class="nav-tab" id="tab-products" onclick="showPage('products')">Urunlerim</button>
-      <button class="nav-tab" id="tab-categories" onclick="showPage('categories')">Kategoriler</button>
+      <button class="nav-tab active" id="tab-home" onclick="showPage(&#39;home&#39;)">Anasayfa</button>
+      <button class="nav-tab" id="tab-products" onclick="showPage(&#39;products&#39;)">Urunlerim</button>
+      <button class="nav-tab" id="tab-categories" onclick="showPage(&#39;categories&#39;)">Kategoriler</button>
     </div>
   </nav>
 
@@ -81,12 +81,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="form-card">
       <div class="field">
         <label>Urun linki</label>
-        <input type="text" id="input-url" placeholder="https://www.trendyol.com/..." />
+        <input type="text" id="input-url" placeholder="https://www.trendyol.com/...">
       </div>
       <div class="row2">
         <div class="field">
           <label>E-posta</label>
-          <input type="email" id="input-email" placeholder="ornek@gmail.com" />
+          <input type="email" id="input-email" placeholder="ornek@gmail.com">
         </div>
         <div class="field">
           <label>Kategori</label>
@@ -94,7 +94,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
             <option>Giyim</option>
             <option>Elektronik</option>
             <option>Aksesuar</option>
-            <option>Ev & Yasam</option>
+            <option>Ev &amp; Yasam</option>
             <option>Spor</option>
             <option>Diger</option>
           </select>
@@ -121,12 +121,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <div class="page" id="page-products">
     <div class="filter-bar">
-      <button class="filter-btn active" onclick="filterProducts(this,'all')">Tumu</button>
-      <button class="filter-btn" onclick="filterProducts(this,'Giyim')">Giyim</button>
-      <button class="filter-btn" onclick="filterProducts(this,'Elektronik')">Elektronik</button>
-      <button class="filter-btn" onclick="filterProducts(this,'Aksesuar')">Aksesuar</button>
-      <button class="filter-btn" onclick="filterProducts(this,'Spor')">Spor</button>
-      <button class="filter-btn" onclick="filterProducts(this,'Ev & Yasam')">Ev & Yasam</button>
+      <button class="filter-btn active" onclick="filterProducts(this,&#39;all&#39;)">Tumu</button>
+      <button class="filter-btn" onclick="filterProducts(this,&#39;Giyim&#39;)">Giyim</button>
+      <button class="filter-btn" onclick="filterProducts(this,&#39;Elektronik&#39;)">Elektronik</button>
+      <button class="filter-btn" onclick="filterProducts(this,&#39;Aksesuar&#39;)">Aksesuar</button>
+      <button class="filter-btn" onclick="filterProducts(this,&#39;Spor&#39;)">Spor</button>
+      <button class="filter-btn" onclick="filterProducts(this,&#39;Ev &amp; Yasam&#39;)">Ev &amp; Yasam</button>
     </div>
     <div class="product-list" id="product-list">
       <div class="empty" id="empty-msg">Henuz urun eklemediniz.</div>
@@ -135,32 +135,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <div class="page" id="page-categories">
     <div class="cat-grid">
-      <div class="cat-card" onclick="goCategory('Giyim')">
+      <div class="cat-card" onclick="goCategory(&#39;Giyim&#39;)">
         <div class="cat-icon"><i class="ti ti-shirt"></i></div>
         <div class="cat-name">Giyim</div>
         <div class="cat-count" id="count-Giyim">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory('Elektronik')">
+      <div class="cat-card" onclick="goCategory(&#39;Elektronik&#39;)">
         <div class="cat-icon"><i class="ti ti-device-laptop"></i></div>
         <div class="cat-name">Elektronik</div>
         <div class="cat-count" id="count-Elektronik">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory('Aksesuar')">
+      <div class="cat-card" onclick="goCategory(&#39;Aksesuar&#39;)">
         <div class="cat-icon"><i class="ti ti-watch"></i></div>
         <div class="cat-name">Aksesuar</div>
         <div class="cat-count" id="count-Aksesuar">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory('Spor')">
+      <div class="cat-card" onclick="goCategory(&#39;Spor&#39;)">
         <div class="cat-icon"><i class="ti ti-bike"></i></div>
         <div class="cat-name">Spor</div>
         <div class="cat-count" id="count-Spor">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory('Ev & Yasam')">
+      <div class="cat-card" onclick="goCategory(&#39;Ev &amp; Yasam&#39;)">
         <div class="cat-icon"><i class="ti ti-home"></i></div>
-        <div class="cat-name">Ev & Yasam</div>
+        <div class="cat-name">Ev &amp; Yasam</div>
         <div class="cat-count" id="count-EV">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory('Diger')">
+      <div class="cat-card" onclick="goCategory(&#39;Diger&#39;)">
         <div class="cat-icon"><i class="ti ti-dots"></i></div>
         <div class="cat-name">Diger</div>
         <div class="cat-count" id="count-Diger">0 urun</div>
@@ -169,7 +169,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 </div>
 
+<script src="./Droppy — Fiyat Takip_files/supabase-js@2"></script>
 <script>
+// ── Supabase ──────────────────────────────────────────────
+const _sb = supabase.createClient(
+  'https://uwxfrbljvmwtxecnqgrl.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3eGZyYmxqdm13dHhlY25xZ3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0OTU5MDEsImV4cCI6MjA5NjA3MTkwMX0.NWihLd26LlMxZzhtCL3ZZ0NTwC0w1UK9L5StDtZiHeI'
+);
+
 var products = [];
 
 function showPage(name) {
@@ -179,11 +186,26 @@ function showPage(name) {
   document.getElementById('tab-' + name).classList.add('active');
 }
 
-function takipeAl() {
+async function takipeAl() {
   var url = document.getElementById('input-url').value.trim();
   var email = document.getElementById('input-email').value.trim();
   var cat = document.getElementById('input-cat').value;
   if (!url || !email) { alert('Lutfen URL ve e-posta giriniz.'); return; }
+
+  var btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Kaydediliyor...';
+
+  var { error } = await _sb.from('urunler').insert([{ url: url, email: email }]);
+
+  btn.disabled = false;
+  btn.textContent = 'Takibe Al';
+
+  if (error) {
+    alert('Hata: ' + (error.message || 'Bir sorun olustu, tekrar dene.'));
+    return;
+  }
+
   var site = 'Diger';
   if (url.includes('trendyol')) site = 'Trendyol';
   else if (url.includes('hepsiburada')) site = 'Hepsiburada';
@@ -262,5 +284,6 @@ function goCategory(cat) {
   renderProducts(cat);
 }
 </script>
-</body>
-</html>
+
+
+</body></html>
