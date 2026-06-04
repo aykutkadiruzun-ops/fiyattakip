@@ -221,7 +221,13 @@ async function takipeAl() {
   var { error } = await _sb.from('urunler').insert([{ url: url, email: email }]);
   btn.disabled = false;
   btn.textContent = 'Takibe Al';
-  if (error) { alert('Hata: ' + (error.message || 'Tekrar dene.')); return; }
+  if (error) {
+  var msg = error.message && error.message.includes('duplicate')
+    ? 'Bu URL zaten takip listenizde!'
+    : 'Hata: ' + (error.message || 'Tekrar dene.');
+  alert(msg);
+  return;
+}
   document.getElementById('input-url').value = '';
   document.getElementById('input-email').value = '';
   var msg = document.getElementById('success-msg');
