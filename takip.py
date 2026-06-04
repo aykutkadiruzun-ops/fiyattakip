@@ -164,12 +164,23 @@ def kontrol_et(urun):
     # Supabase guncelle
     fiyat_guncelle(urun_id, yeni_fiyat, urun_adi)
 
-    # Fiyat dustuyse email gonder
+   # Fiyat dustuyse email gonder
     if eski_fiyat and eski_fiyat != yeni_fiyat:
         print("Fiyat degisti! Email gonderiliyor...")
         email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
     else:
         print("Fiyat degismedi.")
+
+    # Hedef fiyata ulastiysa email gonder
+    hedef_fiyat = urun.get("hedef_fiyat")
+    if hedef_fiyat:
+        try:
+            yeni_sayi = float(yeni_fiyat.replace("TL","").replace(".","").replace(",",".").strip())
+            if yeni_sayi <= float(hedef_fiyat):
+                print("Hedef fiyata ulasildi! Email gonderiliyor...")
+                email_gonder(email, urun_adi, eski_fiyat or "-", yeni_fiyat + " (HEDEF FIYATA ULASILDI!)", url)
+        except Exception as e:
+            print("Hedef fiyat kontrolu hatasi:", e)
 
 # Tum urunleri Supabase'den cek ve kontrol et
 urunler = urunleri_getir()
