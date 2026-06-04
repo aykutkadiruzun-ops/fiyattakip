@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/dilac/Downloads/index_5.html -->
-<html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Droppy — Fiyat Takip</title>
-<link rel="stylesheet" href="./Droppy — Fiyat Takip_files/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f7ff; color: #1a1a2e; }
@@ -62,17 +62,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <body>
 <div class="app">
   <nav class="nav">
-    <a href="file:///C:/Users/dilac/Downloads/index_5.html#" class="logo" onclick="showPage(&#39;home&#39;)">
+    <a href="#" class="logo" onclick="showPage('home')">
       <div class="logo-icon"><i class="ti ti-bell-ringing" style="color:white;font-size:16px"></i></div>
       Droppy
     </a>
     <div class="nav-tabs">
-      <button class="nav-tab active" id="tab-home" onclick="showPage(&#39;home&#39;)">Anasayfa</button>
-      <button class="nav-tab" id="tab-products" onclick="showPage(&#39;products&#39;)">Urunlerim</button>
-      <button class="nav-tab" id="tab-categories" onclick="showPage(&#39;categories&#39;)">Kategoriler</button>
+      <button class="nav-tab active" id="tab-home" onclick="showPage('home')">Anasayfa</button>
+      <button class="nav-tab" id="tab-products" onclick="showPage('products')">Urunlerim</button>
+      <button class="nav-tab" id="tab-categories" onclick="showPage('categories')">Kategoriler</button>
     </div>
   </nav>
-
   <div class="page active" id="page-home">
     <div class="hero-sm">
       <h1>Fiyat dusunce <span>sen al</span></h1>
@@ -81,12 +80,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="form-card">
       <div class="field">
         <label>Urun linki</label>
-        <input type="text" id="input-url" placeholder="https://www.trendyol.com/...">
+        <input type="text" id="input-url" placeholder="https://www.trendyol.com/..." />
       </div>
       <div class="row2">
         <div class="field">
           <label>E-posta</label>
-          <input type="email" id="input-email" placeholder="ornek@gmail.com">
+          <input type="email" id="input-email" placeholder="ornek@gmail.com" />
         </div>
         <div class="field">
           <label>Kategori</label>
@@ -94,7 +93,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
             <option>Giyim</option>
             <option>Elektronik</option>
             <option>Aksesuar</option>
-            <option>Ev &amp; Yasam</option>
+            <option>Ev & Yasam</option>
             <option>Spor</option>
             <option>Diger</option>
           </select>
@@ -118,49 +117,47 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       </div>
     </div>
   </div>
-
   <div class="page" id="page-products">
     <div class="filter-bar">
-      <button class="filter-btn active" onclick="filterProducts(this,&#39;all&#39;)">Tumu</button>
-      <button class="filter-btn" onclick="filterProducts(this,&#39;Giyim&#39;)">Giyim</button>
-      <button class="filter-btn" onclick="filterProducts(this,&#39;Elektronik&#39;)">Elektronik</button>
-      <button class="filter-btn" onclick="filterProducts(this,&#39;Aksesuar&#39;)">Aksesuar</button>
-      <button class="filter-btn" onclick="filterProducts(this,&#39;Spor&#39;)">Spor</button>
-      <button class="filter-btn" onclick="filterProducts(this,&#39;Ev &amp; Yasam&#39;)">Ev &amp; Yasam</button>
+      <button class="filter-btn active" onclick="filterProducts(this,'all')">Tumu</button>
+      <button class="filter-btn" onclick="filterProducts(this,'Giyim')">Giyim</button>
+      <button class="filter-btn" onclick="filterProducts(this,'Elektronik')">Elektronik</button>
+      <button class="filter-btn" onclick="filterProducts(this,'Aksesuar')">Aksesuar</button>
+      <button class="filter-btn" onclick="filterProducts(this,'Spor')">Spor</button>
+      <button class="filter-btn" onclick="filterProducts(this,'Ev & Yasam')">Ev & Yasam</button>
     </div>
     <div class="product-list" id="product-list">
       <div class="empty" id="empty-msg">Henuz urun eklemediniz.</div>
     </div>
   </div>
-
   <div class="page" id="page-categories">
     <div class="cat-grid">
-      <div class="cat-card" onclick="goCategory(&#39;Giyim&#39;)">
+      <div class="cat-card" onclick="goCategory('Giyim')">
         <div class="cat-icon"><i class="ti ti-shirt"></i></div>
         <div class="cat-name">Giyim</div>
         <div class="cat-count" id="count-Giyim">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory(&#39;Elektronik&#39;)">
+      <div class="cat-card" onclick="goCategory('Elektronik')">
         <div class="cat-icon"><i class="ti ti-device-laptop"></i></div>
         <div class="cat-name">Elektronik</div>
         <div class="cat-count" id="count-Elektronik">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory(&#39;Aksesuar&#39;)">
+      <div class="cat-card" onclick="goCategory('Aksesuar')">
         <div class="cat-icon"><i class="ti ti-watch"></i></div>
         <div class="cat-name">Aksesuar</div>
         <div class="cat-count" id="count-Aksesuar">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory(&#39;Spor&#39;)">
+      <div class="cat-card" onclick="goCategory('Spor')">
         <div class="cat-icon"><i class="ti ti-bike"></i></div>
         <div class="cat-name">Spor</div>
         <div class="cat-count" id="count-Spor">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory(&#39;Ev &amp; Yasam&#39;)">
+      <div class="cat-card" onclick="goCategory('Ev & Yasam')">
         <div class="cat-icon"><i class="ti ti-home"></i></div>
-        <div class="cat-name">Ev &amp; Yasam</div>
+        <div class="cat-name">Ev & Yasam</div>
         <div class="cat-count" id="count-EV">0 urun</div>
       </div>
-      <div class="cat-card" onclick="goCategory(&#39;Diger&#39;)">
+      <div class="cat-card" onclick="goCategory('Diger')">
         <div class="cat-icon"><i class="ti ti-dots"></i></div>
         <div class="cat-name">Diger</div>
         <div class="cat-count" id="count-Diger">0 urun</div>
@@ -168,16 +165,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </div>
   </div>
 </div>
-
-<script src="./Droppy — Fiyat Takip_files/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ── Supabase ──────────────────────────────────────────────
 const _sb = supabase.createClient(
   'https://uwxfrbljvmwtxecnqgrl.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3eGZyYmxqdm13dHhlY25xZ3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0OTU5MDEsImV4cCI6MjA5NjA3MTkwMX0.NWihLd26LlMxZzhtCL3ZZ0NTwC0w1UK9L5StDtZiHeI'
 );
 
 var products = [];
+var currentFilter = null;
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
@@ -192,29 +188,13 @@ async function takipeAl() {
   var email = document.getElementById('input-email').value.trim();
   var cat = document.getElementById('input-cat').value;
   if (!url || !email) { alert('Lutfen URL ve e-posta giriniz.'); return; }
-
   var btn = document.querySelector('.submit-btn');
   btn.disabled = true;
   btn.textContent = 'Kaydediliyor...';
-
   var { error } = await _sb.from('urunler').insert([{ url: url, email: email }]);
-
   btn.disabled = false;
   btn.textContent = 'Takibe Al';
-
-  if (error) {
-    alert('Hata: ' + (error.message || 'Bir sorun olustu, tekrar dene.'));
-    return;
-  }
-
-  var site = 'Diger';
-  if (url.includes('trendyol')) site = 'Trendyol';
-  else if (url.includes('hepsiburada')) site = 'Hepsiburada';
-  else if (url.includes('amazon')) site = 'Amazon';
-  else if (url.includes('zara')) site = 'Zara';
-  else if (url.includes('mango')) site = 'Mango';
-  var urun = { url: url, email: email, cat: cat, site: site, name: site + ' urunu', fiyat: 'Bekleniyor' };
-  products.push(urun);
+  if (error) { alert('Hata: ' + (error.message || 'Tekrar dene.')); return; }
   document.getElementById('input-url').value = '';
   document.getElementById('input-email').value = '';
   var msg = document.getElementById('success-msg');
@@ -223,41 +203,26 @@ async function takipeAl() {
   loadProducts(null);
 }
 
-function updateStats() { /* handled by loadProducts */ }
-
-var currentFilter = null;
-
 async function loadProducts(filter) {
   currentFilter = filter || null;
   var list = document.getElementById('product-list');
   list.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#aaa;font-size:13px">Yukleniyor...</div>';
-
-  var query = _sb.from('urunler').select('*').order('id', { ascending: false });
-  var { data, error } = await query;
-
+  var { data, error } = await _sb.from('urunler').select('*').order('id', { ascending: false });
   if (error || !data || data.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#888;font-size:14px">Henuz urun eklemediniz.</div>';
     document.getElementById('stat-total').textContent = 0;
     return;
   }
-
-  var filtered = currentFilter ? data.filter(function(p){ return p.kategori === currentFilter; }) : data;
   document.getElementById('stat-total').textContent = data.length;
-
-  if (filtered.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#888;font-size:14px">Bu kategoride urun yok.</div>';
-    return;
-  }
-
   var html = '';
-  filtered.forEach(function(p) {
+  data.forEach(function(p) {
     var site = 'Diger';
     if (p.url && p.url.includes('trendyol')) site = 'Trendyol';
     else if (p.url && p.url.includes('hepsiburada')) site = 'Hepsiburada';
     else if (p.url && p.url.includes('amazon')) site = 'Amazon';
     var name = p.urun_adi || (site + ' urunu');
     var fiyat = p.son_fiyat || 'Bekleniyor';
-    html += '<div class="product-card" data-id="' + p.id + '">' +
+    html += '<div class="product-card">' +
       '<div class="product-info">' +
       '<div class="product-name">' + name + '</div>' +
       '<div class="product-meta"><span class="cat-badge">' + site + '</span><span class="product-site">' + p.email + '</span></div>' +
@@ -269,12 +234,9 @@ async function loadProducts(filter) {
       '</div></div>';
   });
   list.innerHTML = html;
-  updateCounts(data);
 }
 
-function renderProducts(filter) {
-  loadProducts(filter);
-}
+function renderProducts(filter) { loadProducts(filter); }
 
 async function sil(id, btn) {
   if (!confirm('Bu urunu takipten cikar?')) return;
@@ -287,12 +249,7 @@ async function sil(id, btn) {
 function filterProducts(btn, cat) {
   document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
-  renderProducts(cat === 'all' ? null : cat);
-}
-
-function updateCounts(data) {
-  if (!data) return;
-  document.getElementById('stat-total').textContent = data.length;
+  loadProducts(cat === 'all' ? null : cat);
 }
 
 function goCategory(cat) {
@@ -301,9 +258,8 @@ function goCategory(cat) {
     b.classList.remove('active');
     if(b.textContent === cat) b.classList.add('active');
   });
-  renderProducts(cat);
+  loadProducts(cat);
 }
 </script>
-
-
-</body></html>
+</body>
+</html>
