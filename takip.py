@@ -1,5 +1,4 @@
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth_async, stealth_sync
 import time
 import os
 import json
@@ -45,7 +44,6 @@ def zara_fiyat_ve_adi(url):
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
             page = context.new_page()
-            stealth_sync(page)
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
             time.sleep(12)
 
