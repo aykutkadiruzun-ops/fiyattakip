@@ -149,7 +149,7 @@ def fiyat_cek(url):
             fiyat = trendyol_fiyat(page)
         elif "hepsiburada.com" in url:
             fiyat = hepsiburada_fiyat(page)
-elif "amazon.com.tr" in url or "amazon.tr" in url:
+        elif "amazon.com.tr" in url or "amazon.tr" in url:
             fiyat = amazon_fiyat(page)
         elif "pazarama.com" in url:
             fiyat = pazarama_fiyat(page)
