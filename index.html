@@ -1,12 +1,13 @@
-<!DOCTYPE html>
-<!-- saved from url=(0046)file:///C:/Users/dilac/Downloads/index_12.html -->
-<html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Droppy — Fiyat Takip</title>
-<link rel="preconnect" href="https://fonts.googleapis.com/">
-<link href="./Droppy — Fiyat Takip_files/css2" rel="stylesheet">
-<script src="./Droppy — Fiyat Takip_files/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #0d0d14;
@@ -545,7 +546,7 @@ body {
 <body>
 
 <!-- SPLASH -->
-<div class="screen" id="screen-splash">
+<div class="screen active" id="screen-splash">
   <div class="splash-logo">
     <div class="splash-icon">🔔</div>
     <div class="splash-title">Drop<span>py</span></div>
@@ -555,7 +556,7 @@ body {
 </div>
 
 <!-- AUTH -->
-<div class="screen active" id="screen-auth">
+<div class="screen" id="screen-auth">
   <div class="auth-box">
     <div class="auth-logo">
       <div class="auth-logo-icon">🔔</div>
@@ -563,8 +564,8 @@ body {
       <p>İndirimleri kaçırma, fırsatları yakala</p>
     </div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab(&#39;giris&#39;)">Giriş Yap</button>
-      <button class="auth-tab" onclick="switchAuthTab(&#39;kayit&#39;)">Kayıt Ol</button>
+      <button class="auth-tab active" onclick="switchAuthTab('giris')">Giriş Yap</button>
+      <button class="auth-tab" onclick="switchAuthTab('kayit')">Kayıt Ol</button>
     </div>
     <div class="auth-error" id="auth-error"></div>
 
@@ -572,11 +573,11 @@ body {
     <div class="auth-form active" id="form-giris">
       <div class="auth-field">
         <label>E-POSTA</label>
-        <input type="email" id="giris-email" placeholder="ornek@gmail.com">
+        <input type="email" id="giris-email" placeholder="ornek@gmail.com" />
       </div>
       <div class="auth-field">
         <label>ŞİFRE</label>
-        <input type="password" id="giris-sifre" placeholder="••••••••">
+        <input type="password" id="giris-sifre" placeholder="••••••••" />
       </div>
       <button class="auth-btn" id="giris-btn" onclick="girisYap()">Giriş Yap</button>
     </div>
@@ -585,15 +586,15 @@ body {
     <div class="auth-form" id="form-kayit">
       <div class="auth-field">
         <label>AD SOYAD</label>
-        <input type="text" id="kayit-ad" placeholder="Adın Soyadın">
+        <input type="text" id="kayit-ad" placeholder="Adın Soyadın" />
       </div>
       <div class="auth-field">
         <label>E-POSTA</label>
-        <input type="email" id="kayit-email" placeholder="ornek@gmail.com">
+        <input type="email" id="kayit-email" placeholder="ornek@gmail.com" />
       </div>
       <div class="auth-field">
         <label>ŞİFRE</label>
-        <input type="password" id="kayit-sifre" placeholder="En az 6 karakter">
+        <input type="password" id="kayit-sifre" placeholder="En az 6 karakter" />
       </div>
       <button class="auth-btn" id="kayit-btn" onclick="kayitOl()">Kayıt Ol</button>
     </div>
@@ -605,7 +606,7 @@ body {
   <div class="app-header">
     <div class="header-logo">Drop<span>py</span></div>
     <div class="header-right">
-      <div class="icon-btn-hdr" onclick="showPage(&#39;notifications&#39;)">🔔</div>
+      <div class="icon-btn-hdr" onclick="showPage('notifications')">🔔</div>
     </div>
   </div>
 
@@ -637,7 +638,7 @@ body {
     </div>
     <div class="section-header">
       <div class="section-title">Takipteki Ürünler</div>
-      <div class="section-link" onclick="showPage(&#39;products&#39;)">Tümünü Gör</div>
+      <div class="section-link" onclick="showPage('products')">Tümünü Gör</div>
     </div>
     <div id="dash-products">
       <div class="loading-dots"><span></span><span></span><span></span></div>
@@ -708,19 +709,19 @@ body {
 
   <!-- Bottom Nav -->
   <nav class="bottom-nav">
-    <button class="nav-item active" id="nav-dashboard" onclick="showPage(&#39;dashboard&#39;)">
+    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
       <span class="nav-icon">🏠</span>
       <span>Ana Sayfa</span>
     </button>
-    <button class="nav-item" id="nav-products" onclick="showPage(&#39;products&#39;)">
+    <button class="nav-item" id="nav-products" onclick="showPage('products')">
       <span class="nav-icon">🏷️</span>
       <span>Ürünlerim</span>
     </button>
-    <button class="nav-item" id="nav-notifications" onclick="showPage(&#39;notifications&#39;)">
+    <button class="nav-item" id="nav-notifications" onclick="showPage('notifications')">
       <span class="nav-icon">🔔</span>
       <span>Bildirimler</span>
     </button>
-    <button class="nav-item" id="nav-profile" onclick="showPage(&#39;profile&#39;)">
+    <button class="nav-item" id="nav-profile" onclick="showPage('profile')">
       <span class="nav-icon">👤</span>
       <span>Profil</span>
     </button>
@@ -737,12 +738,12 @@ body {
     <div class="modal-title">Ürün Takibe Al</div>
     <div class="form-field">
       <label>ÜRÜN LİNKİ</label>
-      <input type="url" id="modal-url" placeholder="https://www.trendyol.com/...">
+      <input type="url" id="modal-url" placeholder="https://www.trendyol.com/..." />
     </div>
     <div class="form-row">
       <div class="form-field">
         <label>HEDEF FİYAT (TL)</label>
-        <input type="number" id="modal-hedef" placeholder="499" min="0">
+        <input type="number" id="modal-hedef" placeholder="499" min="0" />
       </div>
       <div class="form-field">
         <label>KATEGORİ</label>
@@ -750,7 +751,7 @@ body {
           <option>Giyim</option>
           <option>Elektronik</option>
           <option>Aksesuar</option>
-          <option>Ev &amp; Yaşam</option>
+          <option>Ev & Yaşam</option>
           <option>Spor</option>
           <option>Diğer</option>
         </select>
@@ -1048,6 +1049,5 @@ function showToast(msg) {
   setTimeout(() => el.classList.remove('show'), 3000);
 }
 </script>
-
-
-</body></html>
+</body>
+</html>
