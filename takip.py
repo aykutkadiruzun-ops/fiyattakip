@@ -46,22 +46,38 @@ def trendyol_fiyat(page):
     return None
 
 def hepsiburada_fiyat(page):
+    # Hepsiburada icin daha uzun bekle
+    time.sleep(5)
     selectors = [
         "[data-test-id='price-current-price']",
-        "span[class*='price']",
-        "div[class*='price'] span",
+        "[class*='currentPrice']",
+        "[class*='current-price']",
+        "[class*='product-price']",
+        "span[class*='Price']",
+        "div[class*='Price'] span",
+        "[data-bind*='price']",
         ".product-price",
         "span.price-value",
+        "[class*='price'] span",
     ]
     for sel in selectors:
         try:
-            el = page.locator(sel).first
-            if el.count() > 0:
+            els = page.locator(sel).all()
+            for el in els:
                 text = el.inner_text().strip()
-                if text and any(c.isdigit() for c in text):
+                if text and any(c.isdigit() for c in text) and ('TL' in text or ',' in text or len(text) < 20):
                     return text
         except:
             pass
+    # Son care: tum sayfayi tara
+    try:
+        content = page.content()
+        import re
+        matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
+        if matches:
+            return matches[0] + ' TL'
+    except:
+        pass
     return None
 
 def amazon_fiyat(page):
