@@ -966,7 +966,7 @@ async function urunEkle() {
   const url = document.getElementById('modal-url').value.trim();
   const hedef = document.getElementById('modal-hedef').value;
  if (!url) { alert('Lütfen ürün linki girin.'); return; }
-  if (url.includes('hepsiburada.com') || url.includes('amazon.com')) {
+  if (url.includes('hepsiburada.com') || url.includes('amazon.com')) {if (url.includes('hepsiburada.com') || url.includes('amazon.com') || url.includes('pazarama.com')) {
     alert('⚠️ Bu site henüz desteklenmiyor. Yakında eklenecek!');
     return;
   }
