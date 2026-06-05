@@ -34,6 +34,52 @@ def http_patch(url, headers, data):
         print("PATCH hatasi:", e)
         return 0
 
+def trendyol_fiyat(page):
+    selectors = [".new-price", ".prc-box-dscntd", ".product-price-container"]
+    for sel in selectors:
+        try:
+            el = page.locator(sel).first
+            if el.count() > 0:
+                return el.inner_text().strip()
+        except:
+            pass
+    return None
+
+def hepsiburada_fiyat(page):
+    selectors = [
+        "[data-test-id='price-current-price']",
+        "span[class*='price']",
+        "div[class*='price'] span",
+        ".product-price",
+        "span.price-value",
+    ]
+    for sel in selectors:
+        try:
+            el = page.locator(sel).first
+            if el.count() > 0:
+                text = el.inner_text().strip()
+                if text and any(c.isdigit() for c in text):
+                    return text
+        except:
+            pass
+    return None
+
+def amazon_fiyat(page):
+    selectors = [
+        "span.a-price-whole",
+        "#priceblock_ourprice",
+        "#priceblock_dealprice",
+        "span[class*='a-price'] .a-offscreen",
+    ]
+    for sel in selectors:
+        try:
+            el = page.locator(sel).first
+            if el.count() > 0:
+                return el.inner_text().strip()
+        except:
+            pass
+    return None
+
 def fiyat_cek(url):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -43,11 +89,27 @@ def fiyat_cek(url):
         page = context.new_page()
         page.goto(url, wait_until="domcontentloaded", timeout=60000)
         time.sleep(8)
-        try:
-            fiyat = page.locator(".new-price").first.inner_text()
-            fiyat = fiyat.strip()
-        except:
-            fiyat = None
+
+        fiyat = None
+        if "trendyol.com" in url:
+            fiyat = trendyol_fiyat(page)
+        elif "hepsiburada.com" in url:
+            fiyat = hepsiburada_fiyat(page)
+        elif "amazon.com.tr" in url or "amazon.tr" in url:
+            fiyat = amazon_fiyat(page)
+        else:
+            # Genel deneme
+            for sel in [".price", "[class*='price']", "[data-test*='price']"]:
+                try:
+                    el = page.locator(sel).first
+                    if el.count() > 0:
+                        text = el.inner_text().strip()
+                        if text and any(c.isdigit() for c in text):
+                            fiyat = text
+                            break
+                except:
+                    pass
+
         browser.close()
         return fiyat
 
@@ -164,23 +226,12 @@ def kontrol_et(urun):
     # Supabase guncelle
     fiyat_guncelle(urun_id, yeni_fiyat, urun_adi)
 
-   # Fiyat dustuyse email gonder
+    # Fiyat dustuyse email gonder
     if eski_fiyat and eski_fiyat != yeni_fiyat:
         print("Fiyat degisti! Email gonderiliyor...")
         email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
     else:
         print("Fiyat degismedi.")
-
-    # Hedef fiyata ulastiysa email gonder
-    hedef_fiyat = urun.get("hedef_fiyat")
-    if hedef_fiyat:
-        try:
-            yeni_sayi = float(yeni_fiyat.replace("TL","").replace(".","").replace(",",".").strip())
-            if yeni_sayi <= float(hedef_fiyat):
-                print("Hedef fiyata ulasildi! Email gonderiliyor...")
-                email_gonder(email, urun_adi, eski_fiyat or "-", yeni_fiyat + " (HEDEF FIYATA ULASILDI!)", url)
-        except Exception as e:
-            print("Hedef fiyat kontrolu hatasi:", e)
 
 # Tum urunleri Supabase'den cek ve kontrol et
 urunler = urunleri_getir()
