@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright
 import time
 import os
 import json
+import re
 import urllib.request
 import urllib.parse
 
@@ -34,6 +35,55 @@ def http_patch(url, headers, data):
         print("PATCH hatasi:", e)
         return 0
 
+# ── ZARA API (Playwright gerektirmez) ─────────────────────────
+def zara_fiyat_ve_adi(url):
+    try:
+        match = re.search(r'-p(\d+)\.html', url)
+        if not match:
+            return None, None
+        product_id = match.group(1)
+
+        # Zara API
+        api_url = f"https://www.zara.com/tr/tr/product/{product_id}/extra-detail"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "tr-TR,tr;q=0.9",
+            "Referer": "https://www.zara.com/tr/",
+        }
+        req = urllib.request.Request(api_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = json.loads(r.read().decode("utf-8"))
+
+        # Fiyat
+        fiyat = None
+        price_val = data.get("price")
+        if price_val:
+            fiyat = f"{int(price_val) // 100:,}".replace(",", ".") + " TL"
+
+        # Ürün adı
+        urun_adi = data.get("name") or data.get("seo", {}).get("title")
+
+        return fiyat, urun_adi
+    except Exception as e:
+        print("Zara API hatasi:", e)
+        # Fallback: sayfadan regex ile çek
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            })
+            with urllib.request.urlopen(req, timeout=20) as r:
+                content = r.read().decode("utf-8")
+            matches = re.findall(r'"price":(\d+)', content)
+            if matches:
+                price_cents = int(matches[0])
+                fiyat = str(price_cents // 100) + " TL"
+                return fiyat, None
+        except Exception as e2:
+            print("Zara fallback hatasi:", e2)
+        return None, None
+
+# ── TRENDYOL ──────────────────────────────────────────────────
 def trendyol_fiyat(page):
     selectors = [".new-price", ".prc-box-dscntd", ".product-price-container"]
     for sel in selectors:
@@ -45,122 +95,16 @@ def trendyol_fiyat(page):
             pass
     return None
 
-def hepsiburada_fiyat(page):
-    # Hepsiburada icin daha uzun bekle
-    time.sleep(5)
-    selectors = [
-        "[data-test-id='price-current-price']",
-        "[class*='currentPrice']",
-        "[class*='current-price']",
-        "[class*='product-price']",
-        "span[class*='Price']",
-        "div[class*='Price'] span",
-        "[data-bind*='price']",
-        ".product-price",
-        "span.price-value",
-        "[class*='price'] span",
-    ]
-    for sel in selectors:
+def trendyol_urun_adi(page):
+    try:
+        return page.locator("h1.pr-new-br span").first.inner_text().strip()
+    except:
         try:
-            els = page.locator(sel).all()
-            for el in els:
-                text = el.inner_text().strip()
-                if text and any(c.isdigit() for c in text) and ('TL' in text or ',' in text or len(text) < 20):
-                    return text
+            return page.locator("h1").first.inner_text().strip()
         except:
-            pass
-    # Son care: tum sayfayi tara
-    try:
-        content = page.content()
-        import re
-        matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
-        if matches:
-            return matches[0] + ' TL'
-    except:
-        pass
-    return None
+            return None
 
-def amazon_fiyat(page):
-    time.sleep(5)
-    selectors = [
-        "#corePriceDisplay_desktop_feature_div .a-price-whole",
-        "span.a-price-whole",
-        "#priceblock_ourprice",
-        "#priceblock_dealprice",
-        ".a-price .a-offscreen",
-        "#apex_offerDisplay_desktop .a-price-whole",
-    ]
-    for sel in selectors:
-        try:
-            el = page.locator(sel).first
-            if el.count() > 0:
-                text = el.inner_text().strip()
-                if text and any(c.isdigit() for c in text):
-                    return text + " TL"
-        except:
-            pass
-    try:
-        import re
-        content = page.content()
-        matches = re.findall(r'"priceAmount":([\d.]+)', content)
-        if matches:
-            return matches[0] + " TL"
-    except:
-        pass
-    return None
-def pazarama_fiyat(page):
-    time.sleep(5)
-    try:
-        import re
-        content = page.content()
-        matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
-        if matches:
-            return matches[0] + ' TL'
-        matches2 = re.findall(r'"price":\s*"?([\d.,]+)"?', content)
-        if matches2:
-            return matches2[0] + ' TL'
-    except:
-        pass
-    return None
-def fiyat_cek(url):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        page = context.new_page()
-        if "pazarama.com" in url:
-            page.goto(url, wait_until="networkidle", timeout=60000)
-            time.sleep(10)
-        else:
-            page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            time.sleep(8)
-
-        fiyat = None
-        if "trendyol.com" in url:
-            fiyat = trendyol_fiyat(page)
-        elif "hepsiburada.com" in url:
-            fiyat = hepsiburada_fiyat(page)
-        elif "amazon.com.tr" in url or "amazon.tr" in url:
-            fiyat = amazon_fiyat(page)
-        elif "pazarama.com" in url:
-            fiyat = pazarama_fiyat(page)
-        else:
-            # Genel deneme
-            for sel in [".price", "[class*='price']", "[data-test*='price']"]:
-                try:
-                    el = page.locator(sel).first
-                    if el.count() > 0:
-                        text = el.inner_text().strip()
-                        if text and any(c.isdigit() for c in text):
-                            fiyat = text
-                            break
-                except:
-                    pass
-
-        browser.close()
-        return fiyat
-
+# ── SUPABASE ──────────────────────────────────────────────────
 def urunleri_getir():
     headers = {
         "apikey": SUPABASE_KEY,
@@ -195,15 +139,6 @@ def gecmise_kaydet(urun_id, fiyat):
         {"urun_id": urun_id, "fiyat": fiyat}
     )
 
-def urun_adi_cek(page):
-    try:
-        return page.locator("h1.pr-new-br span").first.inner_text().strip()
-    except:
-        try:
-            return page.locator("h1").first.inner_text().strip()
-        except:
-            return None
-
 def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
     headers = {
         "Authorization": "Bearer " + RESEND_KEY,
@@ -225,42 +160,42 @@ def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
     status = http_post("https://api.resend.com/emails", headers, data)
     print("Email durumu:", status)
 
+# ── ANA KONTROL FONKSİYONU ────────────────────────────────────
 def kontrol_et(urun):
     urun_id = urun["id"]
     url = urun["url"]
     email = urun["email"]
     eski_fiyat = urun.get("son_fiyat")
-    urun_adi = urun.get("urun_adi") or url
+    urun_adi = urun.get("urun_adi")
 
     print("Kontrol ediliyor:", url)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        page = context.new_page()
-        page.goto(url, wait_until="domcontentloaded", timeout=60000)
-        time.sleep(8)
+    yeni_fiyat = None
 
-        # Fiyat cek
-        yeni_fiyat = None
-        try:
-            yeni_fiyat = page.locator(".new-price").first.inner_text().strip()
-        except:
-            pass
+    # ZARA — Playwright gerektirmez
+    if "zara.com" in url:
+        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
+        if not urun_adi and yeni_adi:
+            urun_adi = yeni_adi
 
-        # Urun adi cek (ilk kontrolde)
-        if not urun.get("urun_adi"):
-            try:
-                urun_adi = page.locator("h1.pr-new-br span").first.inner_text().strip()
-            except:
-                try:
-                    urun_adi = page.locator("h1").first.inner_text().strip()
-                except:
-                    urun_adi = None
+    # TRENDYOL — Playwright
+    elif "trendyol.com" in url:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(8)
+            yeni_fiyat = trendyol_fiyat(page)
+            if not urun_adi:
+                urun_adi = trendyol_urun_adi(page)
+            browser.close()
 
-        browser.close()
+    else:
+        print("Desteklenmeyen site:", url)
+        return
 
     if not yeni_fiyat:
         print("Fiyat cekilemedi:", url)
@@ -281,7 +216,18 @@ def kontrol_et(urun):
     else:
         print("Fiyat degismedi.")
 
-# Tum urunleri Supabase'den cek ve kontrol et
+    # Hedef fiyata ulastiysa email gonder
+    hedef_fiyat = urun.get("hedef_fiyat")
+    if hedef_fiyat:
+        try:
+            yeni_sayi = float(re.sub(r'[^\d,]', '', yeni_fiyat).replace(',', '.'))
+            if yeni_sayi <= float(hedef_fiyat):
+                print("Hedef fiyata ulasildi! Email gonderiliyor...")
+                email_gonder(email, urun_adi, eski_fiyat or "-", yeni_fiyat + " (HEDEF FIYATA ULASILDI!)", url)
+        except Exception as e:
+            print("Hedef fiyat kontrolu hatasi:", e)
+
+# ── CALISTIR ──────────────────────────────────────────────────
 urunler = urunleri_getir()
 print(f"{len(urunler)} urun bulundu.")
 for urun in urunler:
