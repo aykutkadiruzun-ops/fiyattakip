@@ -81,19 +81,32 @@ def hepsiburada_fiyat(page):
     return None
 
 def amazon_fiyat(page):
+    time.sleep(5)
     selectors = [
+        "#corePriceDisplay_desktop_feature_div .a-price-whole",
         "span.a-price-whole",
         "#priceblock_ourprice",
         "#priceblock_dealprice",
-        "span[class*='a-price'] .a-offscreen",
+        ".a-price .a-offscreen",
+        "#apex_offerDisplay_desktop .a-price-whole",
     ]
     for sel in selectors:
         try:
             el = page.locator(sel).first
             if el.count() > 0:
-                return el.inner_text().strip()
+                text = el.inner_text().strip()
+                if text and any(c.isdigit() for c in text):
+                    return text + " TL"
         except:
             pass
+    try:
+        import re
+        content = page.content()
+        matches = re.findall(r'"priceAmount":([\d.]+)', content)
+        if matches:
+            return matches[0] + " TL"
+    except:
+        pass
     return None
 
 def fiyat_cek(url):
