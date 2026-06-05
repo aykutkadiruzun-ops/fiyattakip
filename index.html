@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0046)file:///C:/Users/dilac/Downloads/index_10.html -->
+<!-- saved from url=(0046)file:///C:/Users/dilac/Downloads/index_12.html -->
 <html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -481,6 +481,52 @@ body {
 .notif-sub { font-size: 12px; color: var(--text2); line-height: 1.4; }
 .notif-time { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
+/* Alındı toggle */
+.alindi-toggle {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+  cursor: pointer;
+  width: fit-content;
+}
+.toggle-box {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border2);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  font-size: 12px; color: transparent;
+  flex-shrink: 0;
+}
+.alindi-toggle:hover .toggle-box {
+  border-color: var(--green);
+  background: rgba(34,197,94,0.1);
+  color: var(--green);
+}
+.alindi-toggle span {
+  font-size: 13px; color: var(--text2);
+  transition: color 0.2s;
+}
+.alindi-toggle:hover span { color: var(--green); }
+
+/* Bought products */
+.bought-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 12px;
+  opacity: 0.8;
+}
+.bought-badge {
+  font-size: 10px; font-weight: 600;
+  background: rgba(34,197,94,0.15);
+  color: var(--green);
+  border: 1px solid rgba(34,197,94,0.25);
+  padding: 2px 8px; border-radius: 99px;
+  margin-top: 3px; display: inline-block;
+}
+
 /* Loading */
 .loading-dots {
   display: flex; gap: 6px; justify-content: center; padding: 30px;
@@ -650,7 +696,14 @@ body {
         <div class="settings-arrow">›</div>
       </div>
     </div>
-    <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
+    <div class="section-header" style="margin-top:24px;margin-bottom:12px">
+      <div class="section-title">Satın Alınan Ürünler</div>
+      <div class="section-link" id="bought-count" style="color:var(--text2)"></div>
+    </div>
+    <div id="bought-list">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+    </div>
+    <button class="logout-btn" onclick="cikisYap()" style="margin-top:24px">Çıkış Yap</button>
   </div>
 
   <!-- Bottom Nav -->
@@ -811,6 +864,7 @@ function showPage(name) {
   if (navEl) navEl.classList.add('active');
   if (name === 'dashboard') loadDashboard();
   if (name === 'products') loadProducts();
+  if (name === 'profile') loadBoughtProducts();
 }
 
 // ── DATA ─────────────────────────────────────────────────────
@@ -862,9 +916,14 @@ function productCardHTML(p, showActions) {
   const actionsHTML = showActions ? `
     <div class="product-actions-row">
       <a href="${p.url}" target="_blank" class="act-btn">🔗 Ürüne Git</a>
-      <button class="act-btn" onclick="satinAlindi(${p.id}, '${p.son_fiyat || ''}', '${p.ilk_fiyat || ''}', this)" style="color:var(--green)">✓ Alındı</button>
       <button class="act-btn danger" onclick="urunSil(${p.id}, this)">🗑️ Sil</button>
-    </div>` : '';
+    </div>
+    <label class="alindi-toggle" onclick="satinAlindi(${p.id}, '${p.son_fiyat || ''}', '${p.ilk_fiyat || ''}', this)">
+      <div class="toggle-box">
+        <div class="toggle-check">✓</div>
+      </div>
+      <span>Satın aldım</span>
+    </label>` : '';
 
   return `<div class="product-card">
     <div class="product-thumb">${emoji}</div>
@@ -939,6 +998,39 @@ async function satinAlindi(id, sonFiyat, ilkFiyat, btn) {
   await _sb.from('urunler').update({ satin_alindi: true, tasarruf }).eq('id', id);
   loadProducts();
   loadDashboard();
+}
+
+async function loadBoughtProducts() {
+  if (!currentUser) return;
+  const list = document.getElementById('bought-list');
+  const { data } = await _sb.from('urunler').select('*')
+    .eq('email', currentUser.email)
+    .eq('satin_alindi', true)
+    .order('id', { ascending: false });
+  const alinanlar = data || [];
+  document.getElementById('bought-count').textContent = alinanlar.length + ' ürün';
+  if (alinanlar.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">🛍️</div><div class="empty-title">Henüz satın alınan ürün yok</div></div>';
+    return;
+  }
+  list.innerHTML = alinanlar.map(p => {
+    const site = p.url?.includes('trendyol') ? 'Trendyol' : p.url?.includes('hepsiburada') ? 'Hepsiburada' : 'Diğer';
+    const emoji = site === 'Trendyol' ? '🛍️' : site === 'Hepsiburada' ? '🟠' : '🏪';
+    const name = p.urun_adi || (site + ' ürünü');
+    const fiyat = p.son_fiyat || '-';
+    const tasarruf = p.tasarruf ? `+₺${p.tasarruf.toLocaleString('tr-TR')} tasarruf` : '';
+    return `<div class="bought-card">
+      <div class="product-thumb">${emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div class="product-name">${name}</div>
+        <div class="bought-badge">✓ Satın Alındı</div>
+        ${tasarruf ? `<div style="font-size:11px;color:var(--green);margin-top:3px">${tasarruf}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:600">${fiyat}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function urunSil(id, btn) {
