@@ -108,7 +108,32 @@ def amazon_fiyat(page):
     except:
         pass
     return None
-
+def pazarama_fiyat(page):
+    time.sleep(3)
+    selectors = [
+        "[class*='price-current']",
+        "[class*='product-price']",
+        "span[class*='price']",
+        "[class*='Price']",
+    ]
+    for sel in selectors:
+        try:
+            el = page.locator(sel).first
+            if el.count() > 0:
+                text = el.inner_text().strip()
+                if text and any(c.isdigit() for c in text):
+                    return text
+        except:
+            pass
+    try:
+        import re
+        content = page.content()
+        matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
+        if matches:
+            return matches[0] + ' TL'
+    except:
+        pass
+    return None
 def fiyat_cek(url):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -124,8 +149,10 @@ def fiyat_cek(url):
             fiyat = trendyol_fiyat(page)
         elif "hepsiburada.com" in url:
             fiyat = hepsiburada_fiyat(page)
-        elif "amazon.com.tr" in url or "amazon.tr" in url:
+elif "amazon.com.tr" in url or "amazon.tr" in url:
             fiyat = amazon_fiyat(page)
+        elif "pazarama.com" in url:
+            fiyat = pazarama_fiyat(page)
         else:
             # Genel deneme
             for sel in [".price", "[class*='price']", "[data-test*='price']"]:
