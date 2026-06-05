@@ -42,6 +42,7 @@ def scraper_get(target_url, render_js=True):
         "api_key": SCRAPER_KEY,
         "url": target_url,
         "render": "true" if render_js else "false",
+        "premium": "true",
         "country_code": "tr",
     }
     api_url = "http://api.scraperapi.com?" + urllib.parse.urlencode(params)
