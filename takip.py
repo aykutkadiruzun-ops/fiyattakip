@@ -44,7 +44,7 @@ def zara_fiyat_ve_adi(url):
         product_id = match.group(1)
 
         # Zara API
-        api_url = f"https://www.zara.com/tr/tr/product/{product_id}/extra-detail"
+        api_url = f"https://www.zara.com/tr/tr/product/{product_id}/extra-detail?ajax=true"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
@@ -70,15 +70,21 @@ def zara_fiyat_ve_adi(url):
         # Fallback: sayfadan regex ile çek
         try:
             req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept-Language": "tr-TR,tr;q=0.9",
             })
             with urllib.request.urlopen(req, timeout=20) as r:
                 content = r.read().decode("utf-8")
-            matches = re.findall(r'"price":(\d+)', content)
+            # Kuruş cinsinden fiyat
+            matches = re.findall(r'"price":(\d{4,7})', content)
             if matches:
                 price_cents = int(matches[0])
-                fiyat = str(price_cents // 100) + " TL"
+                fiyat = f"{price_cents // 100:,}".replace(",", ".") + " TL"
                 return fiyat, None
+            # TL formatında fiyat
+            matches2 = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
+            if matches2:
+                return matches2[0] + " TL", None
         except Exception as e2:
             print("Zara fallback hatasi:", e2)
         return None, None
