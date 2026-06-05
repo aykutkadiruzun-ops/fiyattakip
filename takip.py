@@ -109,28 +109,16 @@ def amazon_fiyat(page):
         pass
     return None
 def pazarama_fiyat(page):
-    time.sleep(3)
-    selectors = [
-        "[class*='price-current']",
-        "[class*='product-price']",
-        "span[class*='price']",
-        "[class*='Price']",
-    ]
-    for sel in selectors:
-        try:
-            el = page.locator(sel).first
-            if el.count() > 0:
-                text = el.inner_text().strip()
-                if text and any(c.isdigit() for c in text):
-                    return text
-        except:
-            pass
+    time.sleep(5)
     try:
         import re
         content = page.content()
         matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
         if matches:
             return matches[0] + ' TL'
+        matches2 = re.findall(r'"price":\s*"?([\d.,]+)"?', content)
+        if matches2:
+            return matches2[0] + ' TL'
     except:
         pass
     return None
