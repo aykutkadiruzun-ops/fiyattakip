@@ -35,142 +35,112 @@ def http_patch(url, headers, data):
         print("PATCH hatasi:", e)
         return 0
 
-# ── ZARA API (Playwright gerektirmez) ─────────────────────────
+def playwright_ac(p):
+    browser = p.chromium.launch(
+        headless=True,
+        args=['--disable-blink-features=AutomationControlled']
+    )
+    context = browser.new_context(
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        viewport={"width": 1280, "height": 800},
+        locale="tr-TR",
+        timezone_id="Europe/Istanbul",
+        extra_http_headers={
+            "Accept-Language": "tr-TR,tr;q=0.9",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        }
+    )
+    pg = context.new_page()
+    pg.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    return browser, pg
+
+# ── ZARA ──────────────────────────────────────────────────────
 def zara_fiyat_ve_adi(url):
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=['--disable-blink-features=AutomationControlled'])
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 800},
-                locale="tr-TR",
-                timezone_id="Europe/Istanbul",
-                extra_http_headers={
-                    "Accept-Language": "tr-TR,tr;q=0.9",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                }
-            )
-            
-            page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            page = context.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            browser, pg = playwright_ac(p)
+            pg.goto(url, wait_until="domcontentloaded", timeout=60000)
             time.sleep(12)
 
-            # Fiyat
-            # Debug
-            content = page.content()
-            if "money-amount" in content:
-                print("Zara: money-amount class bulundu")
-            else:
-                print("Zara: money-amount class BULUNAMADI - bot koruması olabilir")
-            if "1.790" in content or "1790" in content:
-                print("Zara: fiyat HTML icinde var")
-            else:
-                print("Zara: fiyat HTML icinde YOK")
-
-            # Fiyat
             fiyat = None
+            # span.money-amount__main
             try:
-                el = page.locator("span.money-amount__main").first
+                el = pg.locator("span.money-amount__main").first
                 if el.count() > 0:
                     fiyat = el.inner_text().strip()
+                    print("Zara fiyat bulundu (span):", fiyat)
             except:
                 pass
 
-            # data value ile dene
+            # data[data-currency] value attribute
             if not fiyat:
                 try:
-                    el = page.locator("data[data-currency='TRY']").first
+                    el = pg.locator("data[data-currency='TRY']").first
                     if el.count() > 0:
                         val = el.get_attribute("value")
                         if val:
                             fiyat = val.replace(".", ",") + " TL"
+                            print("Zara fiyat bulundu (data):", fiyat)
                 except:
                     pass
 
-            # Urun adi
-            urun_adi = None
-            try:
-                urun_adi = page.locator("h1.product-detail-info__header-name").first.inner_text().strip()
-            except:
+            # Regex fallback
+            if not fiyat:
                 try:
-                    urun_adi = page.locator("h1").first.inner_text().strip()
+                    content = pg.content()
+                    matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
+                    if matches:
+                        fiyat = matches[0] + " TL"
+                        print("Zara fiyat bulundu (regex):", fiyat)
+                    else:
+                        print("Zara: fiyat bulunamadi")
                 except:
                     pass
+
+            urun_adi = None
+            try:
+                urun_adi = pg.locator("h1").first.inner_text().strip()
+            except:
+                pass
 
             browser.close()
             return fiyat, urun_adi
     except Exception as e:
         print("Zara hatasi:", e)
         return None, None
-        product_id = match.group(1)
-
-        # Zara API
-        api_url = f"https://www.zara.com/tr/tr/product/{product_id}/extra-detail?ajax=true"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "tr-TR,tr;q=0.9",
-            "Referer": "https://www.zara.com/tr/",
-        }
-        req = urllib.request.Request(api_url, headers=headers)
-        with urllib.request.urlopen(req, timeout=20) as r:
-            data = json.loads(r.read().decode("utf-8"))
-
-        # Fiyat
-        fiyat = None
-        price_val = data.get("price")
-        if price_val:
-            fiyat = f"{int(price_val) // 100:,}".replace(",", ".") + " TL"
-
-        # Ürün adı
-        urun_adi = data.get("name") or data.get("seo", {}).get("title")
-
-        return fiyat, urun_adi
-    except Exception as e:
-        print("Zara API hatasi:", e)
-        # Fallback: sayfadan regex ile çek
-        try:
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept-Language": "tr-TR,tr;q=0.9",
-            })
-            with urllib.request.urlopen(req, timeout=20) as r:
-                content = r.read().decode("utf-8")
-            # Kuruş cinsinden fiyat
-            matches = re.findall(r'"price":(\d{4,7})', content)
-            if matches:
-                price_cents = int(matches[0])
-                fiyat = f"{price_cents // 100:,}".replace(",", ".") + " TL"
-                return fiyat, None
-            # TL formatında fiyat
-            matches2 = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
-            if matches2:
-                return matches2[0] + " TL", None
-        except Exception as e2:
-            print("Zara fallback hatasi:", e2)
-        return None, None
 
 # ── TRENDYOL ──────────────────────────────────────────────────
-def trendyol_fiyat(page):
-    selectors = [".new-price", ".prc-box-dscntd", ".product-price-container"]
-    for sel in selectors:
-        try:
-            el = page.locator(sel).first
-            if el.count() > 0:
-                return el.inner_text().strip()
-        except:
-            pass
-    return None
-
-def trendyol_urun_adi(page):
+def trendyol_fiyat_ve_adi(url):
     try:
-        return page.locator("h1.pr-new-br span").first.inner_text().strip()
-    except:
-        try:
-            return page.locator("h1").first.inner_text().strip()
-        except:
-            return None
+        with sync_playwright() as p:
+            browser, pg = playwright_ac(p)
+            pg.goto(url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(8)
+
+            fiyat = None
+            for sel in [".new-price", ".prc-box-dscntd", ".product-price-container"]:
+                try:
+                    el = pg.locator(sel).first
+                    if el.count() > 0:
+                        fiyat = el.inner_text().strip()
+                        break
+                except:
+                    pass
+
+            urun_adi = None
+            try:
+                urun_adi = pg.locator("h1.pr-new-br span").first.inner_text().strip()
+            except:
+                try:
+                    urun_adi = pg.locator("h1").first.inner_text().strip()
+                except:
+                    pass
+
+            browser.close()
+            return fiyat, urun_adi
+    except Exception as e:
+        print("Trendyol hatasi:", e)
+        return None, None
 
 # ── SUPABASE ──────────────────────────────────────────────────
 def urunleri_getir():
@@ -240,27 +210,14 @@ def kontrol_et(urun):
 
     yeni_fiyat = None
 
-    # ZARA — Playwright gerektirmez
     if "zara.com" in url:
         yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
         if not urun_adi and yeni_adi:
             urun_adi = yeni_adi
-
-    # TRENDYOL — Playwright
     elif "trendyol.com" in url:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
-            page = context.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            time.sleep(8)
-            yeni_fiyat = trendyol_fiyat(page)
-            if not urun_adi:
-                urun_adi = trendyol_urun_adi(page)
-            browser.close()
-
+        yeni_fiyat, yeni_adi = trendyol_fiyat_ve_adi(url)
+        if not urun_adi and yeni_adi:
+            urun_adi = yeni_adi
     else:
         print("Desteklenmeyen site:", url)
         return
@@ -271,20 +228,15 @@ def kontrol_et(urun):
 
     print("Eski:", eski_fiyat, "-> Yeni:", yeni_fiyat)
 
-    # Fiyat gecmisine kaydet
     gecmise_kaydet(urun_id, yeni_fiyat)
-
-    # Supabase guncelle
     fiyat_guncelle(urun_id, yeni_fiyat, urun_adi)
 
-    # Fiyat dustuyse email gonder
     if eski_fiyat and eski_fiyat != yeni_fiyat:
         print("Fiyat degisti! Email gonderiliyor...")
         email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
     else:
         print("Fiyat degismedi.")
 
-    # Hedef fiyata ulastiysa email gonder
     hedef_fiyat = urun.get("hedef_fiyat")
     if hedef_fiyat:
         try:
