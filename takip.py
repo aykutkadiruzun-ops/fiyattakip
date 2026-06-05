@@ -38,9 +38,50 @@ def http_patch(url, headers, data):
 # ── ZARA API (Playwright gerektirmez) ─────────────────────────
 def zara_fiyat_ve_adi(url):
     try:
-        match = re.search(r'-p(\d+)\.html', url)
-        if not match:
-            return None, None
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
+            page.goto(url, wait_until="networkidle", timeout=60000)
+            time.sleep(5)
+
+            # Fiyat
+            fiyat = None
+            try:
+                el = page.locator("span.money-amount__main").first
+                if el.count() > 0:
+                    fiyat = el.inner_text().strip()
+            except:
+                pass
+
+            # data value ile dene
+            if not fiyat:
+                try:
+                    el = page.locator("data[data-currency='TRY']").first
+                    if el.count() > 0:
+                        val = el.get_attribute("value")
+                        if val:
+                            fiyat = val.replace(".", ",") + " TL"
+                except:
+                    pass
+
+            # Urun adi
+            urun_adi = None
+            try:
+                urun_adi = page.locator("h1.product-detail-info__header-name").first.inner_text().strip()
+            except:
+                try:
+                    urun_adi = page.locator("h1").first.inner_text().strip()
+                except:
+                    pass
+
+            browser.close()
+            return fiyat, urun_adi
+    except Exception as e:
+        print("Zara hatasi:", e)
+        return None, None
         product_id = match.group(1)
 
         # Zara API
