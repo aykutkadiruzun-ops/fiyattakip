@@ -39,10 +39,19 @@ def http_patch(url, headers, data):
 def zara_fiyat_ve_adi(url):
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(headless=True, args=['--disable-blink-features=AutomationControlled'])
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 800},
+                locale="tr-TR",
+                timezone_id="Europe/Istanbul",
+                extra_http_headers={
+                    "Accept-Language": "tr-TR,tr;q=0.9",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                }
             )
+            
+            page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
             time.sleep(12)
