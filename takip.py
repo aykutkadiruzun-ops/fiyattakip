@@ -48,6 +48,18 @@ def zara_fiyat_ve_adi(url):
             time.sleep(12)
 
             # Fiyat
+            # Debug
+            content = page.content()
+            if "money-amount" in content:
+                print("Zara: money-amount class bulundu")
+            else:
+                print("Zara: money-amount class BULUNAMADI - bot koruması olabilir")
+            if "1.790" in content or "1790" in content:
+                print("Zara: fiyat HTML icinde var")
+            else:
+                print("Zara: fiyat HTML icinde YOK")
+
+            # Fiyat
             fiyat = None
             try:
                 el = page.locator("span.money-amount__main").first
