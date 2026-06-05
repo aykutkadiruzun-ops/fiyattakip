@@ -1,13 +1,13 @@
-
 <!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0046)file:///C:/Users/dilac/Downloads/index_14.html -->
+<html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Droppy — Fiyat Takip</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./Droppy — Fiyat Takip_files/css2" rel="stylesheet">
+<script src="./Droppy — Fiyat Takip_files/supabase-js@2"></script>
+<script src="./Droppy — Fiyat Takip_files/chart.umd.min.js.indir"></script>
 <style>
 :root {
   --bg: #0d0d14;
@@ -546,7 +546,7 @@ body {
 <body>
 
 <!-- SPLASH -->
-<div class="screen active" id="screen-splash">
+<div class="screen" id="screen-splash">
   <div class="splash-logo">
     <div class="splash-icon">🔔</div>
     <div class="splash-title">Drop<span>py</span></div>
@@ -556,7 +556,7 @@ body {
 </div>
 
 <!-- AUTH -->
-<div class="screen" id="screen-auth">
+<div class="screen active" id="screen-auth">
   <div class="auth-box">
     <div class="auth-logo">
       <div class="auth-logo-icon">🔔</div>
@@ -564,8 +564,8 @@ body {
       <p>İndirimleri kaçırma, fırsatları yakala</p>
     </div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('giris')">Giriş Yap</button>
-      <button class="auth-tab" onclick="switchAuthTab('kayit')">Kayıt Ol</button>
+      <button class="auth-tab active" onclick="switchAuthTab(&#39;giris&#39;)">Giriş Yap</button>
+      <button class="auth-tab" onclick="switchAuthTab(&#39;kayit&#39;)">Kayıt Ol</button>
     </div>
     <div class="auth-error" id="auth-error"></div>
 
@@ -573,11 +573,11 @@ body {
     <div class="auth-form active" id="form-giris">
       <div class="auth-field">
         <label>E-POSTA</label>
-        <input type="email" id="giris-email" placeholder="ornek@gmail.com" />
+        <input type="email" id="giris-email" placeholder="ornek@gmail.com">
       </div>
       <div class="auth-field">
         <label>ŞİFRE</label>
-        <input type="password" id="giris-sifre" placeholder="••••••••" />
+        <input type="password" id="giris-sifre" placeholder="••••••••">
       </div>
       <button class="auth-btn" id="giris-btn" onclick="girisYap()">Giriş Yap</button>
     </div>
@@ -586,15 +586,15 @@ body {
     <div class="auth-form" id="form-kayit">
       <div class="auth-field">
         <label>AD SOYAD</label>
-        <input type="text" id="kayit-ad" placeholder="Adın Soyadın" />
+        <input type="text" id="kayit-ad" placeholder="Adın Soyadın">
       </div>
       <div class="auth-field">
         <label>E-POSTA</label>
-        <input type="email" id="kayit-email" placeholder="ornek@gmail.com" />
+        <input type="email" id="kayit-email" placeholder="ornek@gmail.com">
       </div>
       <div class="auth-field">
         <label>ŞİFRE</label>
-        <input type="password" id="kayit-sifre" placeholder="En az 6 karakter" />
+        <input type="password" id="kayit-sifre" placeholder="En az 6 karakter">
       </div>
       <button class="auth-btn" id="kayit-btn" onclick="kayitOl()">Kayıt Ol</button>
     </div>
@@ -606,7 +606,7 @@ body {
   <div class="app-header">
     <div class="header-logo">Drop<span>py</span></div>
     <div class="header-right">
-      <div class="icon-btn-hdr" onclick="showPage('notifications')">🔔</div>
+      <div class="icon-btn-hdr" onclick="showPage(&#39;notifications&#39;)">🔔</div>
     </div>
   </div>
 
@@ -638,7 +638,7 @@ body {
     </div>
     <div class="section-header">
       <div class="section-title">Takipteki Ürünler</div>
-      <div class="section-link" onclick="showPage('products')">Tümünü Gör</div>
+      <div class="section-link" onclick="showPage(&#39;products&#39;)">Tümünü Gör</div>
     </div>
     <div id="dash-products">
       <div class="loading-dots"><span></span><span></span><span></span></div>
@@ -709,19 +709,19 @@ body {
 
   <!-- Bottom Nav -->
   <nav class="bottom-nav">
-    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+    <button class="nav-item active" id="nav-dashboard" onclick="showPage(&#39;dashboard&#39;)">
       <span class="nav-icon">🏠</span>
       <span>Ana Sayfa</span>
     </button>
-    <button class="nav-item" id="nav-products" onclick="showPage('products')">
+    <button class="nav-item" id="nav-products" onclick="showPage(&#39;products&#39;)">
       <span class="nav-icon">🏷️</span>
       <span>Ürünlerim</span>
     </button>
-    <button class="nav-item" id="nav-notifications" onclick="showPage('notifications')">
+    <button class="nav-item" id="nav-notifications" onclick="showPage(&#39;notifications&#39;)">
       <span class="nav-icon">🔔</span>
       <span>Bildirimler</span>
     </button>
-    <button class="nav-item" id="nav-profile" onclick="showPage('profile')">
+    <button class="nav-item" id="nav-profile" onclick="showPage(&#39;profile&#39;)">
       <span class="nav-icon">👤</span>
       <span>Profil</span>
     </button>
@@ -738,12 +738,12 @@ body {
     <div class="modal-title">Ürün Takibe Al</div>
     <div class="form-field">
       <label>ÜRÜN LİNKİ</label>
-      <input type="url" id="modal-url" placeholder="https://www.trendyol.com/..." />
+      <input type="url" id="modal-url" placeholder="https://www.trendyol.com/...">
     </div>
     <div class="form-row">
       <div class="form-field">
         <label>HEDEF FİYAT (TL)</label>
-        <input type="number" id="modal-hedef" placeholder="499" min="0" />
+        <input type="number" id="modal-hedef" placeholder="499" min="0">
       </div>
       <div class="form-field">
         <label>KATEGORİ</label>
@@ -751,7 +751,7 @@ body {
           <option>Giyim</option>
           <option>Elektronik</option>
           <option>Aksesuar</option>
-          <option>Ev & Yaşam</option>
+          <option>Ev &amp; Yaşam</option>
           <option>Spor</option>
           <option>Diğer</option>
         </select>
@@ -762,6 +762,22 @@ body {
 </div>
 
 <div class="success-toast" id="success-toast">✓ Ürün takibe alındı!</div>
+
+<!-- FİYAT GEÇMİŞİ MODAL -->
+<div class="modal-overlay" id="history-overlay" onclick="closeHistoryOutside(event)">
+  <div class="modal" style="max-height:85vh">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal-title" style="margin:0" id="history-title">Fiyat Geçmişi</div>
+      <button onclick="closeHistory()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div id="history-loading" class="loading-dots"><span></span><span></span><span></span></div>
+    <div id="history-chart-container" style="display:none;position:relative;height:220px;margin-bottom:16px">
+      <canvas id="history-chart"></canvas>
+    </div>
+    <div id="history-list" style="max-height:200px;overflow-y:auto"></div>
+  </div>
+</div>
 
 <script>
 const _sb = supabase.createClient(
@@ -917,6 +933,7 @@ function productCardHTML(p, showActions) {
   const actionsHTML = showActions ? `
     <div class="product-actions-row">
       <a href="${p.url}" target="_blank" class="act-btn">🔗 Ürüne Git</a>
+      <button class="act-btn" onclick="gecmisiGoster(${p.id}, '${(p.urun_adi || 'Ürün').replace(/'/g, '')}')">📈 Geçmiş</button>
       <button class="act-btn danger" onclick="urunSil(${p.id}, this)">🗑️ Sil</button>
     </div>
     <label class="alindi-toggle" onclick="satinAlindi(${p.id}, '${p.son_fiyat || ''}', '${p.ilk_fiyat || ''}', this)">
@@ -965,11 +982,7 @@ async function urunEkle() {
   if (!currentUser) return;
   const url = document.getElementById('modal-url').value.trim();
   const hedef = document.getElementById('modal-hedef').value;
- if (!url) { alert('Lütfen ürün linki girin.'); return; }
-  if (url.includes('hepsiburada.com') || url.includes('amazon.com')) {if (url.includes('hepsiburada.com') || url.includes('amazon.com') || url.includes('pazarama.com')) {
-    alert('⚠️ Bu site henüz desteklenmiyor. Yakında eklenecek!');
-    return;
-  }
+  if (!url) { alert('Lütfen ürün linki girin.'); return; }
   const btn = document.getElementById('modal-btn');
   btn.disabled = true; btn.textContent = 'Kaydediliyor...';
   const { error } = await _sb.from('urunler').insert([{
@@ -1046,6 +1059,89 @@ async function urunSil(id, btn) {
   loadDashboard();
 }
 
+// ── FİYAT GEÇMİŞİ ───────────────────────────────────────────
+let historyChartInstance = null;
+
+async function gecmisiGoster(urunId, urunAdi) {
+  document.getElementById('history-title').textContent = urunAdi + ' — Fiyat Geçmişi';
+  document.getElementById('history-loading').style.display = 'flex';
+  document.getElementById('history-chart-container').style.display = 'none';
+  document.getElementById('history-list').innerHTML = '';
+  document.getElementById('history-overlay').classList.add('open');
+
+  const { data } = await _sb
+    .from('fiyat_gecmisi')
+    .select('*')
+    .eq('urun_id', urunId)
+    .order('kontrol_tarihi', { ascending: true });
+
+  document.getElementById('history-loading').style.display = 'none';
+
+  if (!data || data.length === 0) {
+    document.getElementById('history-list').innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">📊</div><div class="empty-title">Henüz geçmiş yok</div><div class="empty-sub">İlk fiyat kontrolünden sonra burada görünecek</div></div>';
+    return;
+  }
+
+  // Grafik
+  document.getElementById('history-chart-container').style.display = 'block';
+  const labels = data.map(d => {
+    const dt = new Date(d.kontrol_tarihi);
+    return dt.toLocaleDateString('tr-TR', { day:'numeric', month:'short' });
+  });
+  const values = data.map(d => {
+    try {
+      return parseFloat((d.fiyat || '0').replace(/[^\d,]/g,'').replace(',','.'));
+    } catch { return 0; }
+  });
+
+  if (historyChartInstance) historyChartInstance.destroy();
+  const ctx = document.getElementById('history-chart').getContext('2d');
+  historyChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Fiyat (TL)',
+        data: values,
+        borderColor: '#7c5cfc',
+        backgroundColor: 'rgba(124,92,252,0.1)',
+        borderWidth: 2,
+        pointBackgroundColor: '#9d7fff',
+        pointRadius: 4,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#9090b0', font: { size: 11 } }, grid: { color: '#ffffff08' } },
+        y: { ticks: { color: '#9090b0', font: { size: 11 } }, grid: { color: '#ffffff08' } }
+      }
+    }
+  });
+
+  // Liste
+  const listHTML = [...data].reverse().map(d => {
+    const dt = new Date(d.kontrol_tarihi);
+    const tarih = dt.toLocaleDateString('tr-TR') + ' ' + dt.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;color:var(--text2)">${tarih}</div>
+      <div style="font-size:14px;font-weight:600">${d.fiyat || '-'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('history-list').innerHTML = listHTML;
+}
+
+function closeHistory() {
+  document.getElementById('history-overlay').classList.remove('open');
+}
+function closeHistoryOutside(e) {
+  if (e.target === document.getElementById('history-overlay')) closeHistory();
+}
+
 function showToast(msg) {
   const el = document.getElementById('success-toast');
   el.textContent = msg;
@@ -1053,5 +1149,6 @@ function showToast(msg) {
   setTimeout(() => el.classList.remove('show'), 3000);
 }
 </script>
-</body>
-</html>
+
+
+</body></html>
