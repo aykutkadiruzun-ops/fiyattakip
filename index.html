@@ -965,7 +965,11 @@ async function urunEkle() {
   if (!currentUser) return;
   const url = document.getElementById('modal-url').value.trim();
   const hedef = document.getElementById('modal-hedef').value;
-  if (!url) { alert('Lütfen ürün linki girin.'); return; }
+ if (!url) { alert('Lütfen ürün linki girin.'); return; }
+  if (url.includes('hepsiburada.com') || url.includes('amazon.com')) {
+    alert('⚠️ Bu site henüz desteklenmiyor. Yakında eklenecek!');
+    return;
+  }
   const btn = document.getElementById('modal-btn');
   btn.disabled = true; btn.textContent = 'Kaydediliyor...';
   const { error } = await _sb.from('urunler').insert([{
