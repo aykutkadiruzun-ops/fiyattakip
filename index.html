@@ -583,9 +583,20 @@ window.showToast = (msg, type='') => {
 
 const parsePrice = n => {
   if (!n) return null;
-  // "374,99 TL" veya "374.99" veya 374.99 formatlarını destekle
-  const cleaned = String(n).replace(/[^\d,.]/g, '').replace(',', '.');
-  const num = parseFloat(cleaned);
+  let s = String(n).replace(/[^\d.,]/g, ''); // sadece rakam, nokta, virgül
+  // "3.610,00" formatı — binlik nokta + ondalık virgül
+  if (s.includes('.') && s.includes(',')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  // "3.610" formatı — binlik nokta, ondalık yok
+  else if (s.includes('.') && s.split('.').pop().length !== 2) {
+    s = s.replace(/\./g, '');
+  }
+  // "3610,00" formatı — ondalık virgül
+  else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  const num = parseFloat(s);
   return isNaN(num) ? null : num;
 };
 
