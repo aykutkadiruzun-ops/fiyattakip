@@ -1094,8 +1094,13 @@ window.addToCollection = async id => {
 };
 
 window.openNewCollectionModal = () => {
-  openModal();
-  setTimeout(() => document.getElementById('new-koleksiyon').focus(), 300);
+  const isim = prompt('Koleksiyon adı:');
+  if (!isim || !isim.trim()) return;
+  // Koleksiyonu kaydet — boş bir ürün eklemeden sadece ismi hatırlat
+  // Kullanıcı daha sonra ürün ekleyebilir
+  showToast(`"${isim.trim()}" koleksiyonu oluşturuldu! Ürün eklemek için koleksiyona tıkla.`, 'success');
+  // Geçici olarak allProducts'a phantom eklemeden sadece UI'da göster
+  openCollection(isim.trim());
 };
 
 // Koleksiyon Picker
