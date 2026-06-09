@@ -49,6 +49,7 @@ def scraper_get(target_url, render_js=True):
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read().decode("utf-8")
 
+# ── TRENDYOL ──────────────────────────────────────────────────
 def trendyol_fiyat_ve_adi(url):
     try:
         with sync_playwright() as p:
@@ -59,6 +60,7 @@ def trendyol_fiyat_ve_adi(url):
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
             time.sleep(8)
+
             fiyat = None
             for sel in [".new-price", ".prc-box-dscntd", ".product-price-container"]:
                 try:
@@ -68,6 +70,7 @@ def trendyol_fiyat_ve_adi(url):
                         break
                 except:
                     pass
+
             urun_adi = None
             try:
                 urun_adi = page.locator("h1.pr-new-br span").first.inner_text().strip()
@@ -76,38 +79,71 @@ def trendyol_fiyat_ve_adi(url):
                     urun_adi = page.locator("h1").first.inner_text().strip()
                 except:
                     pass
+
             browser.close()
             return fiyat, urun_adi
     except Exception as e:
         print("Trendyol hatasi:", e)
         return None, None
 
+# ── SCRAPER API İLE DİĞER SİTELER ────────────────────────────
 def genel_fiyat_ve_adi(url):
     try:
         content = scraper_get(url, render_js=True)
         fiyat = None
 
-        m = re.search(r'"price"\s*:\s*"?([\d]+(?:[.,]\d+)?)"?', content)
-        if m:
+        def parse_fiyat(raw):
+            # 1.290,00 -> 1290.00
+            if '.' in raw and ',' in raw:
+                raw = raw.replace('.', '').replace(',', '.')
+            # 1290,00 -> 1290.00
+            elif ',' in raw and len(raw.split(',')[-1]) == 2:
+                raw = raw.replace(',', '.')
+            # 1.290 -> 1290 (binlik nokta, ondalık yok)
+            elif '.' in raw and len(raw.split('.')[-1]) != 2:
+                raw = raw.replace('.', '')
             try:
-                val = float(m.group(1).replace(',', '.'))
-                if val > 0:
-                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+                return float(raw)
             except:
-                pass
+                return None
 
+        # 1. JSON price field
+        m = re.search(r'"price"\s*:\s*"?([\d.,]+)"?', content)
+        if m:
+            val = parse_fiyat(m.group(1))
+            if val and val > 1:
+                fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+
+        # 2. 1.290,00 TL formatı
         if not fiyat:
-            matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:TL|₺)', content)
+            matches = re.findall(r'(\d{1,3}(?:\.\d{3})+,\d{2})\s*(?:TL|₺)', content)
             if matches:
-                fiyat = matches[0] + " TL"
+                val = parse_fiyat(matches[0])
+                if val and val > 1:
+                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
 
+        # 3. 1290,00 TL formatı
         if not fiyat:
-            matches2 = re.findall(r'(\d{2,5}[.,]\d{2})\s*(?:TL|₺|lira)', content)
-            if matches2:
-                fiyat = matches2[0] + " TL"
+            matches = re.findall(r'(\d{3,6},\d{2})\s*(?:TL|₺)', content)
+            if matches:
+                val = parse_fiyat(matches[0])
+                if val and val > 1:
+                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
 
+        # 4. Tam sayı fiyat
+        if not fiyat:
+            matches = re.findall(r'(\d{2,6})\s*(?:TL|₺)', content)
+            if matches:
+                val = float(matches[0])
+                if val > 1:
+                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+
+        # Ürün adı
         urun_adi = None
-        for pattern in [r'"name"\s*:\s*"([^"]{5,100})"', r'<h1[^>]*>([^<]{5,100})</h1>', r'<title>([^|<-]{5,80})']:
+        for pattern in [r'<h1[^>]*class="[^"]*product[^"]*"[^>]*>([^<]+)</h1>',
+                        r'"name"\s*:\s*"([^"]{5,100})"',
+                        r'<h1[^>]*>([^<]{5,100})</h1>',
+                        r'<title>([^|<-]{5,80})']:
             m2 = re.search(pattern, content)
             if m2:
                 urun_adi = m2.group(1).strip()
@@ -118,6 +154,7 @@ def genel_fiyat_ve_adi(url):
         print("Genel scraper hatasi:", e)
         return None, None
 
+# ── SUPABASE ──────────────────────────────────────────────────
 def urunleri_getir():
     headers = {
         "apikey": SUPABASE_KEY,
@@ -173,6 +210,7 @@ def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
     status = http_post("https://api.resend.com/emails", headers, data)
     print("Email durumu:", status)
 
+# ── ANA KONTROL FONKSİYONU ────────────────────────────────────
 def kontrol_et(urun):
     urun_id = urun["id"]
     url = urun["url"]
@@ -218,6 +256,7 @@ def kontrol_et(urun):
         except Exception as e:
             print("Hedef fiyat kontrolu hatasi:", e)
 
+# ── CALISTIR ──────────────────────────────────────────────────
 urunler = urunleri_getir()
 print(f"{len(urunler)} urun bulundu.")
 for urun in urunler:
