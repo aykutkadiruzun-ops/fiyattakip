@@ -572,9 +572,18 @@ window.showToast = (msg, type='') => {
   clearTimeout(t._t); t._t = setTimeout(() => t.className='', 3000);
 };
 
+const parsePrice = n => {
+  if (!n) return null;
+  // "374,99 TL" veya "374.99" veya 374.99 formatlarını destekle
+  const cleaned = String(n).replace(/[^\d,.]/g, '').replace(',', '.');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+};
+
 const fmt = n => {
-  if (!n || isNaN(Number(n))) return null;
-  return '₺' + Number(n).toLocaleString('tr-TR', {minimumFractionDigits:2});
+  const num = parsePrice(n);
+  if (num === null) return null;
+  return '₺' + num.toLocaleString('tr-TR', {minimumFractionDigits:2});
 };
 
 // Auth
@@ -666,9 +675,9 @@ async function loadProducts() {
 // Dashboard
 function renderDashboard() {
   const active  = allProducts.filter(p => !p.satin_alindi);
-  const drops   = active.filter(p => p.ilk_fiyat && p.son_fiyat && Number(p.son_fiyat) < Number(p.ilk_fiyat));
-  const targets = active.filter(p => p.hedef_fiyat && p.son_fiyat && Number(p.son_fiyat) <= Number(p.hedef_fiyat));
-  const saving  = allProducts.reduce((s,p) => s + (Number(p.tasarruf)||0), 0);
+  const drops   = active.filter(p => p.ilk_fiyat && p.son_fiyat && parsePrice(p.son_fiyat) < parsePrice(p.ilk_fiyat));
+  const targets = active.filter(p => p.hedef_fiyat && p.son_fiyat && parsePrice(p.son_fiyat) <= parsePrice(p.hedef_fiyat));
+  const saving  = allProducts.reduce((s,p) => s + (parsePrice(p.tasarruf)||0), 0);
   document.getElementById('stat-total').textContent  = active.length;
   document.getElementById('stat-drop').textContent   = drops.length;
   document.getElementById('stat-target').textContent = targets.length;
@@ -698,9 +707,9 @@ function renderAllProducts() {
 
 // Kart HTML
 function cardHTML(p) {
-  const hasFiyat = p.son_fiyat && !isNaN(Number(p.son_fiyat));
-  const drop     = hasFiyat && p.ilk_fiyat && Number(p.son_fiyat) < Number(p.ilk_fiyat);
-  const onTarget = hasFiyat && p.hedef_fiyat && Number(p.son_fiyat) <= Number(p.hedef_fiyat);
+  const hasFiyat = parsePrice(p.son_fiyat) !== null;
+  const drop     = hasFiyat && p.ilk_fiyat && parsePrice(p.son_fiyat) < parsePrice(p.ilk_fiyat);
+  const onTarget = hasFiyat && p.hedef_fiyat && parsePrice(p.son_fiyat) <= parsePrice(p.hedef_fiyat);
   const cls      = onTarget ? 'on-target' : drop ? 'price-drop' : '';
   const priceCls = onTarget ? 'good' : drop ? 'drop' : '';
 
@@ -715,7 +724,7 @@ function cardHTML(p) {
   const chips = [];
   if (onTarget) chips.push(`<span class="chip green">🎯 Hedefe ulaştı</span>`);
   else if (drop) {
-    const diff = Number(p.ilk_fiyat)-Number(p.son_fiyat);
+    const diff = parsePrice(p.ilk_fiyat)-parsePrice(p.son_fiyat);
     chips.push(`<span class="chip purple">↓ ₺${diff.toLocaleString('tr-TR')} düştü</span>`);
   }
   if (p.hedef_fiyat && !onTarget) chips.push(`<span class="chip gray">Hedef: ${fmt(p.hedef_fiyat)}</span>`);
@@ -755,8 +764,8 @@ function cardHTML(p) {
 // Bildirimler
 function renderNotifications() {
   const el      = document.getElementById('notif-list');
-  const drops   = allProducts.filter(p=>!p.satin_alindi&&p.ilk_fiyat&&p.son_fiyat&&Number(p.son_fiyat)<Number(p.ilk_fiyat));
-  const targets = allProducts.filter(p=>!p.satin_alindi&&p.hedef_fiyat&&p.son_fiyat&&Number(p.son_fiyat)<=Number(p.hedef_fiyat));
+  const drops   = allProducts.filter(p=>!p.satin_alindi&&p.ilk_fiyat&&p.son_fiyat&&parsePrice(p.son_fiyat)<parsePrice(p.ilk_fiyat));
+  const targets = allProducts.filter(p=>!p.satin_alindi&&p.hedef_fiyat&&p.son_fiyat&&parsePrice(p.son_fiyat)<=parsePrice(p.hedef_fiyat));
 
   if (!drops.length&&!targets.length) {
     el.innerHTML=`<div class="empty"><div class="eicon">🔔</div><p>Henüz bildirim yok.<br>Fiyat düştüğünde burada görünecek.</p></div>`;
@@ -770,7 +779,7 @@ function renderNotifications() {
         <div class="notif-text"><h4>${p.urun_adi||'Ürün'} hedefe ulaştı!</h4><p>Güncel: ${fmt(p.son_fiyat)} · Hedef: ${fmt(p.hedef_fiyat)}</p></div>
       </div>`),
     ...drops.map(p=>{
-      const diff = Number(p.ilk_fiyat)-Number(p.son_fiyat);
+      const diff = parsePrice(p.ilk_fiyat)-parsePrice(p.son_fiyat);
       return `
       <div class="notif-item">
         <div class="notif-badge drop">📉</div>
