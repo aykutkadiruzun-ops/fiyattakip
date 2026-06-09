@@ -825,7 +825,24 @@ window.addProduct = async () => {
 
 // Rafıma al / çıkar
 window.toggleShelf = async (id, current) => {
-  const { error } = await sb.from('urunler').update({satin_alindi:!current}).eq('id',id);
+  let updateData = { satin_alindi: !current };
+
+  // Rafıma alınıyorsa tasarrufu hesapla
+  if (!current) {
+    const urun = allProducts.find(p => p.id === id);
+    if (urun && urun.ilk_fiyat && urun.son_fiyat) {
+      const ilk = parsePrice(urun.ilk_fiyat);
+      const son = parsePrice(urun.son_fiyat);
+      if (ilk && son && ilk > son) {
+        updateData.tasarruf = (ilk - son).toFixed(2);
+      }
+    }
+  } else {
+    // Raftan çıkarılıyorsa tasarrufu sıfırla
+    updateData.tasarruf = 0;
+  }
+
+  const { error } = await sb.from('urunler').update(updateData).eq('id', id);
   if (error) { showToast('Hata.','error'); return; }
   await loadProducts();
   renderAllProducts();
