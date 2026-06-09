@@ -399,6 +399,9 @@
       <div class="form-group"><label>E-posta</label><input type="email" id="login-email" placeholder="ornek@email.com" autocomplete="off" /></div>
       <div class="form-group"><label>Şifre</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <button class="btn-primary" id="btn-login" onclick="doLogin()">Giriş Yap</button>
+      <div style="text-align:center;margin-top:14px">
+        <button onclick="showForgotPassword()" style="background:none;border:none;color:var(--accent);font-family:Figtree,sans-serif;font-size:13px;font-weight:600;cursor:pointer">Şifremi Unuttum</button>
+      </div>
     </div>
     <div id="signup-form" style="display:none">
       <div class="form-group"><label>E-posta</label><input type="email" id="signup-email" placeholder="ornek@email.com" /></div>
@@ -407,6 +410,18 @@
     </div>
     <div class="auth-msg error"   id="auth-error"></div>
     <div class="auth-msg success" id="auth-success"></div>
+
+    <div id="forgot-form" style="display:none;margin-top:4px">
+      <div style="font-size:14px;font-weight:600;color:var(--primary);margin-bottom:16px">E-posta adresini gir, sıfırlama bağlantısı gönderelim.</div>
+      <div class="form-group">
+        <label>E-posta</label>
+        <input type="email" id="forgot-email" placeholder="ornek@email.com" onkeydown="if(event.key==='Enter')doForgotPassword()" />
+      </div>
+      <button class="btn-primary" id="btn-forgot" onclick="doForgotPassword()">Sıfırlama Maili Gönder</button>
+      <div style="text-align:center;margin-top:14px">
+        <button onclick="hideForgotPassword()" style="background:none;border:none;color:var(--muted);font-family:Figtree,sans-serif;font-size:13px;font-weight:600;cursor:pointer">← Geri Dön</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -686,6 +701,36 @@ window.doSignup = async () => {
 };
 
 window.doLogout = async () => { await sb.auth.signOut(); };
+
+window.showForgotPassword = () => {
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('forgot-form').style.display = 'block';
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-success').style.display = 'none';
+};
+
+window.hideForgotPassword = () => {
+  document.getElementById('login-form').style.display = '';
+  document.getElementById('forgot-form').style.display = 'none';
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-success').style.display = 'none';
+};
+
+window.doForgotPassword = async () => {
+  const email = document.getElementById('forgot-email').value.trim();
+  if (!email) { showErr('E-posta gerekli.'); return; }
+  const btn = document.getElementById('btn-forgot');
+  btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://rafta.net'
+  });
+  btn.innerHTML = 'Sıfırlama Maili Gönder'; btn.disabled = false;
+  if (error) { showErr(error.message); return; }
+  const ok = document.getElementById('auth-success');
+  ok.textContent = '✅ Sıfırlama maili gönderildi! E-postanı kontrol et.';
+  ok.style.display = 'block';
+  document.getElementById('forgot-email').value = '';
+};
 
 function showErr(msg) {
   const el = document.getElementById('auth-error');
