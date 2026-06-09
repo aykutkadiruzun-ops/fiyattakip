@@ -154,8 +154,10 @@
     .nav-btn .nav-label { font-size: 10px; font-weight: 700; letter-spacing: .2px; }
     .nav-btn.active { color: var(--accent); }
 
+    .bottom-nav { padding: 0 4px 8px; }
+    .nav-btn { gap: 3px; }
     .nav-btn.center-btn {
-      width: 54px; height: 54px; flex: none;
+      width: 50px; height: 50px; flex: none;
       background: var(--accent); border-radius: 18px;
       color: #fff; padding: 0; margin-bottom: 10px;
       box-shadow: 0 6px 20px rgba(108,99,255,.45);
@@ -495,6 +497,24 @@
     <button class="btn-logout" onclick="doLogout()">Çıkış Yap</button>
   </div>
 
+  <!-- Koleksiyonlar -->
+  <div class="page" id="page-collections">
+    <div class="section-hd" style="margin-bottom:16px">
+      Koleksiyonlar
+      <button class="see-all" onclick="openNewCollectionModal()">+ Yeni</button>
+    </div>
+    <div id="collections-list"></div>
+  </div>
+
+  <!-- Koleksiyon Detay -->
+  <div class="page" id="page-collection-detail">
+    <div class="section-hd" style="margin-bottom:16px">
+      <button onclick="goPage('collections')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-weight:700;font-family:Figtree,sans-serif;font-size:13px;">← Geri</button>
+      <span id="collection-detail-title"></span>
+    </div>
+    <div id="collection-detail-products"></div>
+  </div>
+
   <!-- Rafımdakiler -->
   <div class="page" id="page-shelf">
     <div class="section-hd" style="margin-bottom:16px">
@@ -521,6 +541,10 @@
       <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="nav-label">Bildirimler</span>
     </button>
+    <button class="nav-btn" id="nav-collections" onclick="goPage('collections')">
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span class="nav-label">Koleksiyonlar</span>
+    </button>
     <button class="nav-btn" id="nav-profile" onclick="goPage('profile')">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span class="nav-label">Profil</span>
@@ -536,12 +560,9 @@
     <div class="field"><label>Ürün Linki</label><input type="url" id="new-url" placeholder="Trendyol, Bershka, Zara, H&M..." /></div>
     <div class="field"><label>Hedef Fiyat (₺)</label><input type="number" id="new-target" placeholder="örn. 450" min="0" step="0.01" /></div>
     <div class="field">
-      <label>Kategori</label>
-      <select id="new-category">
-        <option value="">Seçiniz</option>
-        <option>Giyim</option><option>Elektronik</option><option>Aksesuar</option>
-        <option>Ev &amp; Yaşam</option><option>Spor</option><option>Diğer</option>
-      </select>
+      <label>Koleksiyon (opsiyonel)</label>
+      <input type="text" id="new-koleksiyon" placeholder="örn. Yaz Koleksiyonu, Ev Dekorasyonu..." list="koleksiyon-list" />
+      <datalist id="koleksiyon-list"></datalist>
     </div>
     <button class="btn-primary" id="btn-add" onclick="addProduct()">Rafta Takibe Al</button>
   </div>
@@ -675,6 +696,7 @@ window.goPage = name => {
   if (name==='products')      renderAllProducts();
   if (name==='notifications') renderNotifications();
   if (name==='shelf')         renderShelf();
+  if (name==='collections')   renderCollections();
 };
 
 // Modal
@@ -876,16 +898,18 @@ window.addProduct = async () => {
   }
   const btn = document.getElementById('btn-add');
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
+  const koleksiyon = document.getElementById('new-koleksiyon').value.trim();
   const { error } = await sb.from('urunler').insert([{
     url, email: currentUser.email,
     hedef_fiyat: target ? parseFloat(target) : null,
     urun_adi: cat || null,
+    koleksiyon: koleksiyon || null,
   }]);
   btn.innerHTML='Rafta Takibe Al'; btn.disabled=false;
   if (error) { showToast('Eklenemedi: '+error.message,'error'); return; }
   document.getElementById('new-url').value='';
   document.getElementById('new-target').value='';
-  document.getElementById('new-category').value='';
+  document.getElementById('new-koleksiyon').value='';
   closeModal();
   showToast('Ürün rafa eklendi! ✅','success');
   loadProducts();
@@ -914,6 +938,52 @@ window.toggleShelf = async (id, current) => {
   if (error) { showToast('Hata.','error'); return; }
   await loadProducts();
   renderAllProducts();
+};
+
+// Koleksiyonlar
+function renderCollections() {
+  const el = document.getElementById('collections-list');
+  const koleksiyonlar = [...new Set(allProducts
+    .filter(p => p.koleksiyon)
+    .map(p => p.koleksiyon))];
+
+  // datalist güncelle
+  const dl = document.getElementById('koleksiyon-list');
+  if (dl) dl.innerHTML = koleksiyonlar.map(k => `<option value="${k}">`).join('');
+
+  if (!koleksiyonlar.length) {
+    el.innerHTML = `<div class="empty"><div class="eicon">📁</div><p>Henüz koleksiyon yok.<br>Ürün eklerken koleksiyon adı belirt.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = koleksiyonlar.map(k => {
+    const urunler = allProducts.filter(p => p.koleksiyon === k);
+    const aktif   = urunler.filter(p => !p.satin_alindi);
+    return `
+    <div class="product-card" style="cursor:pointer" onclick="openCollection('${k.replace(/'/g,"\'")}')">
+      <div class="pc-header">
+        <div class="pc-info">
+          <div class="pc-name">${k}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;font-weight:500">${aktif.length} ürün takipte</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.openCollection = name => {
+  document.getElementById('collection-detail-title').textContent = name;
+  const list = allProducts.filter(p => p.koleksiyon === name);
+  document.getElementById('collection-detail-products').innerHTML = list.length
+    ? list.map(cardHTML).join('')
+    : `<div class="empty"><div class="eicon">📦</div><p>Bu koleksiyonda ürün yok.</p></div>`;
+  goPage('collection-detail');
+};
+
+window.openNewCollectionModal = () => {
+  openModal();
+  setTimeout(() => document.getElementById('new-koleksiyon').focus(), 300);
 };
 
 // Sil
