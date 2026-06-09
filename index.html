@@ -860,9 +860,8 @@ window.addProduct = async () => {
   const target = document.getElementById('new-target').value.trim();
   const cat    = document.getElementById('new-category').value;
   if (!url) { showToast('Link gerekli.','error'); return; }
-  const desteklenen = ['trendyol.com','hepsiburada.com','zara.com','bershka.com','pullandbear.com','massimodutti.com','stradivarius.com','oysho.com','pazarama.com'];
-  if (!desteklenen.some(site => url.includes(site))) {
-    showToast('Desteklenmeyen site. Trendyol, Bershka, Zara vb. dene.','error'); return;
+  if (!url.startsWith('http')) {
+    showToast('Geçerli bir link gir.','error'); return;
   }
   const btn = document.getElementById('btn-add');
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
