@@ -233,21 +233,21 @@ def kontrol_et(urun):
     yeni_fiyat = None
     yeni_adi = None
 
-    if "trendyol.com" in url:
+   if "trendyol.com" in url:
         yeni_fiyat, yeni_adi = trendyol_fiyat_ve_adi(url)
     elif "hepsiburada.com" in url:
         yeni_fiyat, yeni_adi = hepsiburada_fiyat_ve_adi(url)
     elif "zara.com" in url:
-        elif "bershka.com" in url:
-    yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-elif "pullandbear.com" in url:
-    yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-elif "massimodutti.com" in url:
-    yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-elif "stradivarius.com" in url:
-    yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-elif "oysho.com" in url:
-    yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
+        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
+    elif "bershka.com" in url:
+        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
+    elif "pullandbear.com" in url:
+        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
+    elif "massimodutti.com" in url:
+        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
+    elif "stradivarius.com" in url:
+        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
+    elif "oysho.com" in url:
         yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
     elif "pazarama.com" in url:
         yeni_fiyat, yeni_adi = pazarama_fiyat_ve_adi(url)
