@@ -584,6 +584,15 @@
   </div>
 </div>
 
+<!-- KOLEKSIYONA EKLE MODALİ -->
+<div class="modal-overlay" id="add-to-collection-overlay" onclick="if(event.target.id==='add-to-collection-overlay')document.getElementById('add-to-collection-overlay').classList.remove('open')">
+  <div class="modal" style="padding-bottom:36px;max-height:80vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:16px">Koleksiyona Ürün Ekle</h3>
+    <div id="add-to-collection-list"></div>
+  </div>
+</div>
+
 <!-- GEÇMİŞ MODALİ -->
 <div class="modal-overlay" id="chart-overlay" onclick="closeChartOutside(event)">
   <div class="modal" style="padding-bottom:32px">
@@ -991,13 +1000,97 @@ function renderCollections() {
   }).join('');
 }
 
+let currentCollection = null;
+
 window.openCollection = name => {
+  currentCollection = name;
   document.getElementById('collection-detail-title').textContent = name;
-  const list = allProducts.filter(p => p.koleksiyon === name);
-  document.getElementById('collection-detail-products').innerHTML = list.length
-    ? list.map(cardHTML).join('')
-    : `<div class="empty"><div class="eicon">📦</div><p>Bu koleksiyonda ürün yok.</p></div>`;
+  renderCollectionDetail();
   goPage('collection-detail');
+};
+
+function renderCollectionDetail() {
+  const list = allProducts.filter(p => p.koleksiyon === currentCollection);
+  const el = document.getElementById('collection-detail-products');
+  
+  // Ekle butonu
+  const addBtn = `
+    <button class="btn-primary" style="margin-bottom:16px" onclick="showAddToCollection()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Bu Koleksiyona Ürün Ekle
+    </button>`;
+
+  if (!list.length) {
+    el.innerHTML = addBtn + `<div class="empty"><div class="eicon">📦</div><p>Bu koleksiyonda ürün yok.<br>Yukarıdaki butona basarak ekleyebilirsin.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = addBtn + list.map(p => collectionItemHTML(p)).join('');
+}
+
+function collectionItemHTML(p) {
+  const fiyat = fmt(p.son_fiyat) || 'Bekleniyor';
+  return `
+  <div class="product-card">
+    <div class="pc-header">
+      <div class="pc-info">
+        <div class="pc-name">${p.urun_adi || 'İsimsiz ürün'}</div>
+        <a class="pc-url" href="${p.url}" target="_blank" rel="noopener">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Ürüne Git
+        </a>
+      </div>
+      <div class="pc-price-block">
+        <div class="pc-price">${fiyat}</div>
+      </div>
+    </div>
+    <div class="pc-actions">
+      <button class="btn-sm del" onclick="removeFromCollection(${p.id})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Koleksiyondan Çıkar
+      </button>
+    </div>
+  </div>`;
+}
+
+window.removeFromCollection = async id => {
+  const { error } = await sb.from('urunler').update({ koleksiyon: null }).eq('id', id);
+  if (error) { showToast('Hata.','error'); return; }
+  showToast('Koleksiyondan çıkarıldı.','success');
+  await loadProducts();
+  renderCollectionDetail();
+};
+
+window.showAddToCollection = () => {
+  // Koleksiyonda olmayan ürünleri listele
+  const digerUrunler = allProducts.filter(p => p.koleksiyon !== currentCollection && !p.satin_alindi);
+  const el = document.getElementById('add-to-collection-list');
+  
+  if (!digerUrunler.length) {
+    el.innerHTML = `<div class="empty" style="padding:20px"><p>Eklenecek başka ürün yok.</p></div>`;
+  } else {
+    el.innerHTML = digerUrunler.map(p => `
+      <div class="product-card" style="margin-bottom:8px;cursor:pointer" onclick="addToCollection(${p.id})">
+        <div class="pc-header">
+          <div class="pc-info">
+            <div class="pc-name">${p.urun_adi || 'İsimsiz ürün'}</div>
+            <div style="font-size:12px;color:var(--muted)">${p.koleksiyon ? '📁 '+p.koleksiyon : 'Koleksiyonsuz'}</div>
+          </div>
+          <div class="pc-price" style="font-size:15px">${fmt(p.son_fiyat) || '—'}</div>
+        </div>
+      </div>`).join('');
+  }
+  
+  document.getElementById('add-to-collection-overlay').classList.add('open');
+};
+
+window.addToCollection = async id => {
+  const { error } = await sb.from('urunler').update({ koleksiyon: currentCollection }).eq('id', id);
+  if (error) { showToast('Hata.','error'); return; }
+  showToast(`Koleksiyona eklendi ✅`,'success');
+  document.getElementById('add-to-collection-overlay').classList.remove('open');
+  await loadProducts();
+  renderCollectionDetail();
 };
 
 window.openNewCollectionModal = () => {
