@@ -99,14 +99,14 @@
     .auth-msg.success { background: #f0fdf4; color: #16a34a;       border: 1.5px solid #bbf7d0; }
 
     /* ── APP ────────────────────────────────────────── */
-    #app-screen { display: none; min-height: 100vh; background: var(--bg); padding-bottom: calc(var(--nav-h) + 8px); }
+    #app-screen { display: none; min-height: 100vh; background: var(--bg); padding-bottom: calc(var(--nav-h) + 8px); padding-top: 58px; }
 
     /* ── TOPBAR ─────────────────────────────────────── */
     .topbar {
       background: var(--primary);
       padding: 0 20px; height: 58px;
       display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     }
 
     .topbar-logo { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.4px; }
@@ -130,7 +130,7 @@
     }
 
     /* ── SAYFALAR ───────────────────────────────────── */
-    .page { display: none; padding: 20px 16px; max-width: 580px; margin: 0 auto; }
+    .page { display: none; padding: 20px 16px 20px; max-width: 580px; margin: 0 auto; }
     .page.active { display: block; }
 
     /* ── BOTTOM NAV ─────────────────────────────────── */
@@ -165,7 +165,7 @@
     .nav-btn.center-btn svg { width: 26px; height: 26px; stroke-width: 2.5; }
 
     /* ── DASHBOARD ──────────────────────────────────── */
-    .greeting { margin-bottom: 20px; }
+    .greeting { margin-bottom: 20px; margin-top: 4px; }
     .greeting h2 { font-size: 24px; font-weight: 800; letter-spacing: -.3px; }
     .greeting p  { font-size: 14px; color: var(--muted); margin-top: 3px; font-weight: 500; }
 
