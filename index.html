@@ -484,7 +484,7 @@
         </div>
         <span class="menu-arrow">›</span>
       </div>
-      <div class="menu-item" onclick="showShelf()">
+      <div class="menu-item" onclick="goPage('shelf')">
         <div class="menu-left">
           <div class="menu-icon-wrap blue">📦</div>
           Rafımdakiler
@@ -493,6 +493,15 @@
       </div>
     </div>
     <button class="btn-logout" onclick="doLogout()">Çıkış Yap</button>
+  </div>
+
+  <!-- Rafımdakiler -->
+  <div class="page" id="page-shelf">
+    <div class="section-hd" style="margin-bottom:16px">
+      Rafımdakiler
+      <span id="shelf-count" style="font-size:13px;color:var(--muted);font-weight:600"></span>
+    </div>
+    <div id="shelf-products"></div>
   </div>
 
   <!-- Bottom Nav -->
@@ -654,6 +663,7 @@ window.goPage = name => {
   document.getElementById('nav-'+name)?.classList.add('active');
   if (name==='products')      renderAllProducts();
   if (name==='notifications') renderNotifications();
+  if (name==='shelf')         renderShelf();
 };
 
 // Modal
@@ -790,13 +800,58 @@ function renderNotifications() {
 }
 
 // Rafımdakiler
-window.showShelf = () => {
-  const list = allProducts.filter(p=>p.satin_alindi);
-  const el   = document.getElementById('all-products');
-  document.getElementById('product-count').textContent = list.length + ' ürün';
-  el.innerHTML = list.length ? list.map(cardHTML).join('') :
-    `<div class="empty"><div class="eicon">📦</div><p>Henüz rafına aldığın ürün yok.</p></div>`;
-  goPage('products');
+function renderShelf() {
+  const list = allProducts.filter(p => p.satin_alindi);
+  const el   = document.getElementById('shelf-products');
+  document.getElementById('shelf-count').textContent = list.length + ' ürün';
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="eicon">📦</div><p>Henüz rafına aldığın ürün yok.<br>"Rafıma Al" ile ürün ekleyebilirsin.</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(p => shelfCardHTML(p)).join('');
+}
+
+function shelfCardHTML(p) {
+  const saving = p.tasarruf && parsePrice(p.tasarruf) > 0
+    ? `<span class="chip green">💰 ₺${parsePrice(p.tasarruf).toLocaleString('tr-TR')} tasarruf</span>`
+    : '';
+  const fiyat = fmt(p.son_fiyat) || '—';
+  return `
+  <div class="product-card on-shelf" style="opacity:1">
+    <div class="pc-header">
+      <div class="pc-info">
+        <div class="pc-name">${p.urun_adi || 'İsimsiz ürün'}</div>
+        <a class="pc-url" href="${p.url}" target="_blank" rel="noopener">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Ürüne Git
+        </a>
+      </div>
+      <div class="pc-price-block">
+        <div class="pc-price">${fiyat}</div>
+        ${p.ilk_fiyat ? `<div class="pc-old-price">${fmt(p.ilk_fiyat)}</div>` : ''}
+      </div>
+    </div>
+    ${saving ? `<div class="pc-chips">${saving}</div>` : ''}
+    <div class="pc-actions">
+      <button class="btn-sm shelf-btn done" onclick="toggleShelf(${p.id}, true); goPage('shelf')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Rafımda
+      </button>
+      <button class="btn-sm del" onclick="deleteFromShelf(${p.id})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Sil
+      </button>
+    </div>
+  </div>`;
+}
+
+window.deleteFromShelf = async id => {
+  if (!confirm('Bu ürünü silmek istiyor musun?')) return;
+  const { error } = await sb.from('urunler').delete().eq('id', id);
+  if (error) { showToast('Silinemedi.', 'error'); return; }
+  showToast('Silindi.', 'success');
+  await loadProducts();
+  renderShelf();
 };
 
 // Ürün ekle
