@@ -228,7 +228,8 @@ def kontrol_et(urun):
     else:
         yeni_fiyat, yeni_adi = genel_fiyat_ve_adi(url)
 
-    if not urun_adi and yeni_adi:
+    # Siteden gelen isim varsa her zaman güncelle
+    if yeni_adi:
         urun_adi = yeni_adi
 
     if not yeni_fiyat:
