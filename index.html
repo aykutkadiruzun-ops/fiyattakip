@@ -1,28 +1,27 @@
-
 <!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0046)file:///C:/Users/dilac/Downloads/index_17.html -->
+<html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Droppy — Fiyat Takip</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<title>Rafta — Fiyat Takip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./Rafta — Fiyat Takip_files/css2" rel="stylesheet">
+<script src="./Rafta — Fiyat Takip_files/supabase-js@2"></script>
+<script src="./Rafta — Fiyat Takip_files/chart.umd.min.js.indir"></script>
 <style>
 :root {
-  --bg: #0d0d14;
-  --bg2: #13131f;
-  --bg3: #1a1a2a;
+  --bg: #2B2D42;
+  --bg2: #22243A;
+  --bg3: #1E2035;
   --border: #ffffff0f;
   --border2: #ffffff18;
-  --accent: #7c5cfc;
-  --accent2: #9d7fff;
-  --accent-glow: rgba(124,92,252,0.25);
+  --accent: #6C63FF;
+  --accent2: #6C63FF;
+  --accent-glow: rgba(108,99,255,0.25);
   --green: #22c55e;
   --red: #ef4444;
   --yellow: #f59e0b;
-  --text: #f0f0ff;
+  --text: #F8F8FA;
   --text2: #9090b0;
   --text3: #5a5a7a;
   --card: #13131f;
@@ -33,7 +32,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Figtree', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -547,26 +546,26 @@ body {
 <body>
 
 <!-- SPLASH -->
-<div class="screen active" id="screen-splash">
+<div class="screen" id="screen-splash">
   <div class="splash-logo">
-    <div class="splash-icon">🔔</div>
-    <div class="splash-title">Drop<span>py</span></div>
-    <div class="splash-sub">İndirimleri senin yerine takip eder</div>
+    <div class="splash-icon" style="background:#6C63FF">🏷️</div>
+    <div class="splash-title" style="font-family:Figtree,sans-serif">rafta<span style="color:#6C63FF">.</span></div>
+    <div class="splash-sub">İndirimleri kaçırma, fırsatları yakala</div>
     <div class="splash-bar"><div class="splash-bar-fill"></div></div>
   </div>
 </div>
 
 <!-- AUTH -->
-<div class="screen" id="screen-auth">
+<div class="screen active" id="screen-auth">
   <div class="auth-box">
     <div class="auth-logo">
-      <div class="auth-logo-icon">🔔</div>
-      <h1>Droppy</h1>
+      <div class="auth-logo-icon" style="background:#6C63FF">🏷️</div>
+      <h1 style="font-family:Figtree,sans-serif">rafta<span style="color:#6C63FF">.</span></h1>
       <p>İndirimleri kaçırma, fırsatları yakala</p>
     </div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('giris')">Giriş Yap</button>
-      <button class="auth-tab" onclick="switchAuthTab('kayit')">Kayıt Ol</button>
+      <button class="auth-tab active" onclick="switchAuthTab(&#39;giris&#39;)">Giriş Yap</button>
+      <button class="auth-tab" onclick="switchAuthTab(&#39;kayit&#39;)">Kayıt Ol</button>
     </div>
     <div class="auth-error" id="auth-error"></div>
 
@@ -574,11 +573,11 @@ body {
     <div class="auth-form active" id="form-giris">
       <div class="auth-field">
         <label>E-POSTA</label>
-        <input type="email" id="giris-email" placeholder="ornek@gmail.com" />
+        <input type="email" id="giris-email" placeholder="ornek@gmail.com">
       </div>
       <div class="auth-field">
         <label>ŞİFRE</label>
-        <input type="password" id="giris-sifre" placeholder="••••••••" />
+        <input type="password" id="giris-sifre" placeholder="••••••••">
       </div>
       <button class="auth-btn" id="giris-btn" onclick="girisYap()">Giriş Yap</button>
     </div>
@@ -587,15 +586,15 @@ body {
     <div class="auth-form" id="form-kayit">
       <div class="auth-field">
         <label>AD SOYAD</label>
-        <input type="text" id="kayit-ad" placeholder="Adın Soyadın" />
+        <input type="text" id="kayit-ad" placeholder="Adın Soyadın">
       </div>
       <div class="auth-field">
         <label>E-POSTA</label>
-        <input type="email" id="kayit-email" placeholder="ornek@gmail.com" />
+        <input type="email" id="kayit-email" placeholder="ornek@gmail.com">
       </div>
       <div class="auth-field">
         <label>ŞİFRE</label>
-        <input type="password" id="kayit-sifre" placeholder="En az 6 karakter" />
+        <input type="password" id="kayit-sifre" placeholder="En az 6 karakter">
       </div>
       <button class="auth-btn" id="kayit-btn" onclick="kayitOl()">Kayıt Ol</button>
     </div>
@@ -605,9 +604,9 @@ body {
 <!-- MAIN APP -->
 <div class="screen" id="screen-app">
   <div class="app-header">
-    <div class="header-logo">Drop<span>py</span></div>
+    <div class="header-logo" style="font-family:Figtree,sans-serif">rafta<span style="color:#6C63FF">.</span></div>
     <div class="header-right">
-      <div class="icon-btn-hdr" onclick="showPage('notifications')">🔔</div>
+      <div class="icon-btn-hdr" onclick="showPage(&#39;notifications&#39;)">🔔</div>
     </div>
   </div>
 
@@ -639,7 +638,7 @@ body {
     </div>
     <div class="section-header">
       <div class="section-title">Takipteki Ürünler</div>
-      <div class="section-link" onclick="showPage('products')">Tümünü Gör</div>
+      <div class="section-link" onclick="showPage(&#39;products&#39;)">Tümünü Gör</div>
     </div>
     <div id="dash-products">
       <div class="loading-dots"><span></span><span></span><span></span></div>
@@ -710,19 +709,19 @@ body {
 
   <!-- Bottom Nav -->
   <nav class="bottom-nav">
-    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+    <button class="nav-item active" id="nav-dashboard" onclick="showPage(&#39;dashboard&#39;)">
       <span class="nav-icon">🏠</span>
       <span>Ana Sayfa</span>
     </button>
-    <button class="nav-item" id="nav-products" onclick="showPage('products')">
+    <button class="nav-item" id="nav-products" onclick="showPage(&#39;products&#39;)">
       <span class="nav-icon">🏷️</span>
       <span>Ürünlerim</span>
     </button>
-    <button class="nav-item" id="nav-notifications" onclick="showPage('notifications')">
+    <button class="nav-item" id="nav-notifications" onclick="showPage(&#39;notifications&#39;)">
       <span class="nav-icon">🔔</span>
       <span>Bildirimler</span>
     </button>
-    <button class="nav-item" id="nav-profile" onclick="showPage('profile')">
+    <button class="nav-item" id="nav-profile" onclick="showPage(&#39;profile&#39;)">
       <span class="nav-icon">👤</span>
       <span>Profil</span>
     </button>
@@ -739,12 +738,12 @@ body {
     <div class="modal-title">Ürün Takibe Al</div>
     <div class="form-field">
       <label>ÜRÜN LİNKİ</label>
-      <input type="url" id="modal-url" placeholder="https://www.trendyol.com/..." />
+      <input type="url" id="modal-url" placeholder="https://www.trendyol.com/...">
     </div>
     <div class="form-row">
       <div class="form-field">
         <label>HEDEF FİYAT (TL)</label>
-        <input type="number" id="modal-hedef" placeholder="499" min="0" />
+        <input type="number" id="modal-hedef" placeholder="499" min="0">
       </div>
       <div class="form-field">
         <label>KATEGORİ</label>
@@ -752,7 +751,7 @@ body {
           <option>Giyim</option>
           <option>Elektronik</option>
           <option>Aksesuar</option>
-          <option>Ev & Yaşam</option>
+          <option>Ev &amp; Yaşam</option>
           <option>Spor</option>
           <option>Diğer</option>
         </select>
@@ -1150,5 +1149,6 @@ function showToast(msg) {
   setTimeout(() => el.classList.remove('show'), 3000);
 }
 </script>
-</body>
-</html>
+
+
+</body></html>
