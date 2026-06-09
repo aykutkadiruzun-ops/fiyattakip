@@ -7,7 +7,7 @@ import urllib.request
 import urllib.parse
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_L567-kgj8bZmK6uhMABbkA_VwhqrGCn")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 RESEND_KEY = os.environ.get("RESEND_KEY", "re_4Q6m5BmF_BibZvq3izfs193Huzhy2tj26")
 SCRAPER_KEY = os.environ.get("SCRAPER_KEY", "e69fb8c04518138c28881d88931b8e14")
 
@@ -37,7 +37,6 @@ def http_patch(url, headers, data):
         return 0
 
 def scraper_get(target_url, render_js=True):
-    """ScraperAPI ile sayfa çek"""
     params = {
         "api_key": SCRAPER_KEY,
         "url": target_url,
@@ -46,16 +45,13 @@ def scraper_get(target_url, render_js=True):
         "country_code": "tr",
     }
     api_url = "http://api.scraperapi.com?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(api_url, headers={
-        "User-Agent": "Mozilla/5.0"
-    })
+    req = urllib.request.Request(api_url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read().decode("utf-8")
 
 # ── TRENDYOL ──────────────────────────────────────────────────
 def trendyol_fiyat_ve_adi(url):
     try:
-        # Trendyol hala Playwright ile calisiyor
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -91,77 +87,27 @@ def trendyol_fiyat_ve_adi(url):
         return None, None
 
 # ── SCRAPER API İLE DİĞER SİTELER ────────────────────────────
-def hepsiburada_fiyat_ve_adi(url):
+def genel_fiyat_ve_adi(url):
     try:
         content = scraper_get(url, render_js=True)
-        # Fiyat
         fiyat = None
-        matches = re.findall(r'"price":\s*"?([\d.]+)"?', content)
+        matches = re.findall(r'(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})\s*(?:TL|₺)', content)
         if matches:
-            try:
-                fiyat = f"{float(matches[0]):,.2f}".replace(",", ".") + " TL"
-            except:
-                pass
+            fiyat = matches[0] + " TL"
         if not fiyat:
-            matches2 = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
+            matches2 = re.findall(r'"price":\s*"?([\d.,]+)"?', content)
             if matches2:
-                fiyat = matches2[0] + " TL"
-        # Urun adi
+                try:
+                    fiyat = f"{float(matches2[0]):,.2f}".replace(",", ".") + " TL"
+                except:
+                    pass
         urun_adi = None
         m = re.search(r'<h1[^>]*>([^<]+)</h1>', content)
         if m:
             urun_adi = m.group(1).strip()
         return fiyat, urun_adi
     except Exception as e:
-        print("Hepsiburada hatasi:", e)
-        return None, None
-
-def zara_fiyat_ve_adi(url):
-    try:
-        content = scraper_get(url, render_js=True)
-        # span.money-amount__main icindeki fiyat
-        fiyat = None
-        m = re.search(r'money-amount__main[^>]*>([^<]+)</span>', content)
-        if m:
-            fiyat = m.group(1).strip()
-        if not fiyat:
-            matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
-            if matches:
-                fiyat = matches[0] + " TL"
-        if not fiyat:
-            # data value
-            m2 = re.search(r'data-currency="TRY"\s+value="([\d.]+)"', content)
-            if m2:
-                val = float(m2.group(1))
-                fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-        # Urun adi
-        urun_adi = None
-        m3 = re.search(r'<h1[^>]*>([^<]+)</h1>', content)
-        if m3:
-            urun_adi = m3.group(1).strip()
-        return fiyat, urun_adi
-    except Exception as e:
-        print("Zara hatasi:", e)
-        return None, None
-
-def pazarama_fiyat_ve_adi(url):
-    try:
-        content = scraper_get(url, render_js=True)
-        fiyat = None
-        matches = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*TL', content)
-        if matches:
-            fiyat = matches[0] + " TL"
-        if not fiyat:
-            m = re.search(r'"price":\s*"?([\d.,]+)"?', content)
-            if m:
-                fiyat = m.group(1) + " TL"
-        urun_adi = None
-        m2 = re.search(r'<h1[^>]*>([^<]+)</h1>', content)
-        if m2:
-            urun_adi = m2.group(1).strip()
-        return fiyat, urun_adi
-    except Exception as e:
-        print("Pazarama hatasi:", e)
+        print("Genel scraper hatasi:", e)
         return None, None
 
 # ── SUPABASE ──────────────────────────────────────────────────
@@ -233,27 +179,10 @@ def kontrol_et(urun):
     yeni_fiyat = None
     yeni_adi = None
 
-   if "trendyol.com" in url:
+    if "trendyol.com" in url:
         yeni_fiyat, yeni_adi = trendyol_fiyat_ve_adi(url)
-    elif "hepsiburada.com" in url:
-        yeni_fiyat, yeni_adi = hepsiburada_fiyat_ve_adi(url)
-    elif "zara.com" in url:
-        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-    elif "bershka.com" in url:
-        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-    elif "pullandbear.com" in url:
-        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-    elif "massimodutti.com" in url:
-        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-    elif "stradivarius.com" in url:
-        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-    elif "oysho.com" in url:
-        yeni_fiyat, yeni_adi = zara_fiyat_ve_adi(url)
-    elif "pazarama.com" in url:
-        yeni_fiyat, yeni_adi = pazarama_fiyat_ve_adi(url)
     else:
-        print("Desteklenmeyen site:", url)
-        return
+        yeni_fiyat, yeni_adi = genel_fiyat_ve_adi(url)
 
     if not urun_adi and yeni_adi:
         urun_adi = yeni_adi
