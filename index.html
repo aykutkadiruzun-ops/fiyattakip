@@ -394,8 +394,8 @@
       <button class="auth-tab" onclick="switchTab('signup')">Kayıt Ol</button>
     </div>
     <div id="login-form">
-      <div class="form-group"><label>E-posta</label><input type="email" id="login-email" placeholder="ornek@email.com" /></div>
-      <div class="form-group"><label>Şifre</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+      <div class="form-group"><label>E-posta</label><input type="email" id="login-email" placeholder="ornek@email.com" autocomplete="off" /></div>
+      <div class="form-group"><label>Şifre</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <button class="btn-primary" id="btn-login" onclick="doLogin()">Giriş Yap</button>
     </div>
     <div id="signup-form" style="display:none">
