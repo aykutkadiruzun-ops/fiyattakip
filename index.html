@@ -569,6 +569,21 @@
 </div>
 
 
+<!-- KOLEKSİYON SEÇİCİ -->
+<div class="modal-overlay" id="collection-picker-overlay" onclick="closeCollectionPicker(event)">
+  <div class="modal" style="padding-bottom:36px">
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:16px">Koleksiyona Ekle</h3>
+    <div class="field">
+      <label>Koleksiyon Adı</label>
+      <input type="text" id="picker-koleksiyon-input" placeholder="Mevcut seç veya yeni yaz..." list="picker-koleksiyon-list" />
+      <datalist id="picker-koleksiyon-list"></datalist>
+    </div>
+    <div id="picker-existing-collections" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+    <button class="btn-primary" onclick="saveCollectionPicker()">Kaydet</button>
+  </div>
+</div>
+
 <!-- GEÇMİŞ MODALİ -->
 <div class="modal-overlay" id="chart-overlay" onclick="closeChartOutside(event)">
   <div class="modal" style="padding-bottom:32px">
@@ -796,6 +811,10 @@ function cardHTML(p) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Geçmiş
       </button>
+      <button class="btn-sm" onclick="showCollectionPicker(${p.id},'${(p.koleksiyon||'').replace(/'/g,'')}')" title="Koleksiyona ekle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        ${p.koleksiyon ? p.koleksiyon : 'Koleksiyon'}
+      </button>
       <button class="btn-sm del" onclick="deleteProduct(${p.id})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         Sil
@@ -984,6 +1003,49 @@ window.openCollection = name => {
 window.openNewCollectionModal = () => {
   openModal();
   setTimeout(() => document.getElementById('new-koleksiyon').focus(), 300);
+};
+
+// Koleksiyon Picker
+let pickerUrunId = null;
+
+window.showCollectionPicker = (id, mevcut) => {
+  pickerUrunId = id;
+  const input = document.getElementById('picker-koleksiyon-input');
+  input.value = mevcut || '';
+
+  // Mevcut koleksiyonları listele
+  const koleksiyonlar = [...new Set(allProducts.filter(p => p.koleksiyon).map(p => p.koleksiyon))];
+  
+  // datalist güncelle
+  document.getElementById('picker-koleksiyon-list').innerHTML = 
+    koleksiyonlar.map(k => `<option value="${k}">`).join('');
+
+  // Hızlı seçim butonları
+  const el = document.getElementById('picker-existing-collections');
+  el.innerHTML = koleksiyonlar.map(k => `
+    <button class="chip ${mevcut===k?'purple':'gray'}" style="cursor:pointer;border:none" 
+      onclick="document.getElementById('picker-koleksiyon-input').value='${k.replace(/'/g,"\'")}'">${k}</button>
+  `).join('');
+
+  document.getElementById('collection-picker-overlay').classList.add('open');
+  setTimeout(() => input.focus(), 300);
+};
+
+window.closeCollectionPicker = e => {
+  if(e.target.id==='collection-picker-overlay') 
+    document.getElementById('collection-picker-overlay').classList.remove('open');
+};
+
+window.saveCollectionPicker = async () => {
+  const val = document.getElementById('picker-koleksiyon-input').value.trim();
+  const { error } = await sb.from('urunler')
+    .update({ koleksiyon: val || null })
+    .eq('id', pickerUrunId);
+  if (error) { showToast('Hata.','error'); return; }
+  document.getElementById('collection-picker-overlay').classList.remove('open');
+  showToast(val ? `"${val}" koleksiyonuna eklendi ✅` : 'Koleksiyondan çıkarıldı.', 'success');
+  await loadProducts();
+  renderAllProducts();
 };
 
 // Sil
