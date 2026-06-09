@@ -1,15 +1,14 @@
-<!DOCTYPE html>
-<!-- saved from url=(0046)file:///C:/Users/dilac/Downloads/index_21.html -->
-<html lang="tr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rafta — Fiyat Takip</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com/">
-  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
-  <link href="./Rafta — Fiyat Takip_files/css2" rel="stylesheet">
 
-  <!-- ✅ Doğru Supabase CDN — UMD build, global `supabase` nesnesi -->
-  <script src="./Rafta — Fiyat Takip_files/supabase.js.indir"></script>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rafta — Fiyat Takip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet" />
+
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -482,32 +481,32 @@
 <body>
 
 <!-- ════ AUTH EKRANI ════════════════════════════════════════════ -->
-<div id="auth-screen" style="display: none;">
+<div id="auth-screen">
   <div class="auth-card">
     <div class="logo">
       <div class="logo-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M4 8L12 4L20 8" stroke="#6C63FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-          <path d="M4 12L12 8L20 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".6"></path>
-          <path d="M6 16L12 19L18 16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".35"></path>
+          <path d="M4 8L12 4L20 8" stroke="#6C63FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 12L12 8L20 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/>
+          <path d="M6 16L12 19L18 16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".35"/>
         </svg>
       </div>
       <div class="logo-text">rafta<span>.</span></div>
     </div>
 
     <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-login" onclick="switchTab(&#39;login&#39;)">Giriş Yap</button>
-      <button class="auth-tab" id="tab-signup" onclick="switchTab(&#39;signup&#39;)">Kayıt Ol</button>
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Giriş Yap</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Kayıt Ol</button>
     </div>
 
     <div id="login-form">
       <div class="form-group">
         <label>E-posta</label>
-        <input type="email" id="login-email" placeholder="ornek@email.com">
+        <input type="email" id="login-email" placeholder="ornek@email.com" />
       </div>
       <div class="form-group">
         <label>Şifre</label>
-        <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key===&#39;Enter&#39;)doLogin()">
+        <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
       </div>
       <button class="btn-primary" id="btn-login" onclick="doLogin()">Giriş Yap</button>
     </div>
@@ -515,11 +514,11 @@
     <div id="signup-form" style="display:none">
       <div class="form-group">
         <label>E-posta</label>
-        <input type="email" id="signup-email" placeholder="ornek@email.com">
+        <input type="email" id="signup-email" placeholder="ornek@email.com" />
       </div>
       <div class="form-group">
         <label>Şifre</label>
-        <input type="password" id="signup-pass" placeholder="En az 6 karakter" onkeydown="if(event.key===&#39;Enter&#39;)doSignup()">
+        <input type="password" id="signup-pass" placeholder="En az 6 karakter" onkeydown="if(event.key==='Enter')doSignup()" />
       </div>
       <button class="btn-primary" id="btn-signup" onclick="doSignup()">Hesap Oluştur</button>
     </div>
@@ -533,7 +532,7 @@
   <nav class="topbar">
     <div class="topbar-logo">rafta<span>.</span></div>
     <div class="topbar-right">
-      <span class="user-email" id="user-email-display">aykutkadiruzun@gmail.com</span>
+      <span class="user-email" id="user-email-display"></span>
       <button class="btn-logout" onclick="doLogout()">Çıkış</button>
     </div>
   </nav>
@@ -546,15 +545,15 @@
       <div class="add-row">
         <div class="field">
           <label>Trendyol Linki</label>
-          <input type="url" id="new-url" placeholder="https://www.trendyol.com/...">
+          <input type="url" id="new-url" placeholder="https://www.trendyol.com/..." />
         </div>
         <div class="field">
           <label>Ürün Adı (opsiyonel)</label>
-          <input type="text" id="new-name" placeholder="Otomatik çekilir">
+          <input type="text" id="new-name" placeholder="Otomatik çekilir" />
         </div>
         <div class="field">
           <label>Hedef Fiyat (₺)</label>
-          <input type="number" id="new-target" placeholder="örn. 450" min="0" step="0.01">
+          <input type="number" id="new-target" placeholder="örn. 450" min="0" step="0.01" />
         </div>
         <button class="btn-add" id="btn-add" onclick="addProduct()">+ Ekle</button>
       </div>
@@ -563,130 +562,15 @@
     <!-- Ürün Listesi -->
     <div class="section-header">
       <h2>Takip Edilen Ürünler</h2>
-      <span class="badge" id="product-count">5</span>
+      <span class="badge" id="product-count">0</span>
     </div>
 
     <div id="product-list">
-    <div class="product-card  " id="card-17">
-      <div class="product-info">
-        <h3>Ltb Logo Baskılı Siyah T-shırt</h3>
-        <a class="product-url" href="https://www.trendyol.com/ltb/logo-baskili-siyah-t-shirt-p-1109047108?boutiqueId=61&amp;merchantId=346&amp;filterOverPriceListings=false&amp;sav=true" target="_blank" rel="noopener">https://www.trendyol.com/ltb/logo-baskili-siyah-t-shirt-p-1109047108?boutiqueId=61&amp;merchantId=346&amp;filterOverPriceListings=false&amp;sav=true</a>
-        <div class="product-meta">
-          
-          <div class="stat-chip"><span class="label">Hedef</span><span class="value">₺300</span></div>
-          
-          
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
-        <div class="price-block">
-          <div class="current-price ">₺NaN</div>
-          <div class="target-price">Hedef: ₺300</div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-bought " onclick="toggleBought(17, false)">
-            Satın Aldım
-          </button>
-          <button class="btn-icon danger" onclick="deleteProduct(17)" title="Sil">🗑</button>
-        </div>
+      <div class="empty-state">
+        <div class="spinner" style="border-color:rgba(108,99,255,.2);border-top-color:var(--accent);width:28px;height:28px;margin:0 auto 16px"></div>
+        <p>Yükleniyor…</p>
       </div>
     </div>
-    <div class="product-card  " id="card-16">
-      <div class="product-info">
-        <h3>Tüm Değerlendirmeler (58)</h3>
-        <a class="product-url" href="https://www.hepsiburada.com/mmetalic-leo-erkek-oversize-t-shirt-p-HBCV000063F8QX" target="_blank" rel="noopener">https://www.hepsiburada.com/mmetalic-leo-erkek-oversize-t-shirt-p-HBCV000063F8QX</a>
-        <div class="product-meta">
-          
-          <div class="stat-chip"><span class="label">Hedef</span><span class="value">₺250</span></div>
-          
-          
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
-        <div class="price-block">
-          <div class="current-price ">₺NaN</div>
-          <div class="target-price">Hedef: ₺250</div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-bought " onclick="toggleBought(16, false)">
-            Satın Aldım
-          </button>
-          <button class="btn-icon danger" onclick="deleteProduct(16)" title="Sil">🗑</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card  " id="card-15">
-      <div class="product-info">
-        <h3>İNGİLTERE 66 FIFA DÜNYA KUPASI™ FIFA CLASSICS YAMALI T-SHIRT</h3>
-        <a class="product-url" href="https://www.zara.com/tr/tr/ingiltere-66-fifa-dunya-kupasi--fifa-classics-yamali-t-shirt-p04442325.html?v1=553260092&amp;v2=2721384" target="_blank" rel="noopener">https://www.zara.com/tr/tr/ingiltere-66-fifa-dunya-kupasi--fifa-classics-yamali-t-shirt-p04442325.html?v1=553260092&amp;v2=2721384</a>
-        <div class="product-meta">
-          
-          <div class="stat-chip"><span class="label">Hedef</span><span class="value">₺1.800</span></div>
-          
-          
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
-        <div class="price-block">
-          <div class="current-price ">₺NaN</div>
-          <div class="target-price">Hedef: ₺1.800</div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-bought " onclick="toggleBought(15, false)">
-            Satın Aldım
-          </button>
-          <button class="btn-icon danger" onclick="deleteProduct(15)" title="Sil">🗑</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card  bought" id="card-4">
-      <div class="product-info">
-        <h3>Sinbo Sco-5043 Çok Fonksiyonlu Buharlı Pişirici</h3>
-        <a class="product-url" href="https://www.trendyol.com/sinbo/sco-5043-cok-fonksiyonlu-buharli-pisirici-p-1889980?boutiqueId=61&amp;merchantId=1038352" target="_blank" rel="noopener">https://www.trendyol.com/sinbo/sco-5043-cok-fonksiyonlu-buharli-pisirici-p-1889980?boutiqueId=61&amp;merchantId=1038352</a>
-        <div class="product-meta">
-          
-          
-          
-          
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
-        <div class="price-block">
-          <div class="current-price ">₺NaN</div>
-          
-        </div>
-        <div class="product-actions">
-          <button class="btn-bought done" onclick="toggleBought(4, true)">
-            ✓ Alındı
-          </button>
-          <button class="btn-icon danger" onclick="deleteProduct(4)" title="Sil">🗑</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card  bought" id="card-2">
-      <div class="product-info">
-        <h3>İpekyol Mom fit jean pantolon</h3>
-        <a class="product-url" href="https://www.trendyol.com/ipekyol/mom-fit-jean-pantolon-p-932921199?boutiqueId=61&amp;merchantId=1138&amp;filterOverPriceListings=false&amp;sav=true" target="_blank" rel="noopener">https://www.trendyol.com/ipekyol/mom-fit-jean-pantolon-p-932921199?boutiqueId=61&amp;merchantId=1138&amp;filterOverPriceListings=false&amp;sav=true</a>
-        <div class="product-meta">
-          
-          
-          
-          
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
-        <div class="price-block">
-          <div class="current-price ">₺NaN</div>
-          
-        </div>
-        <div class="product-actions">
-          <button class="btn-bought done" onclick="toggleBought(2, true)">
-            ✓ Alındı
-          </button>
-          <button class="btn-icon danger" onclick="deleteProduct(2)" title="Sil">🗑</button>
-        </div>
-      </div>
-    </div></div>
 
   </main>
 </div>
@@ -694,15 +578,15 @@
 <!-- Toast -->
 <div id="toast"></div>
 
-<script>
+<script type="module">
 // ════════════════════════════════════════════════════════════
-//  Supabase init — global `supabase` nesnesi CDN'den geliyor
+//  Supabase init — ESM import
 // ════════════════════════════════════════════════════════════
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const SUPABASE_URL  = 'https://uwxfrbljvmwtxecnqgrl.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_L567-kgj8bZmK6uhMABbkA_VwhqrGCn';
 
-// createClient global supabase nesnesinden geliyor
-const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── UI helpers ──────────────────────────────────────────────
@@ -903,6 +787,5 @@ async function deleteProduct(id) {
   loadProducts();
 }
 </script>
-
-
-</body></html>
+</body>
+</html>
