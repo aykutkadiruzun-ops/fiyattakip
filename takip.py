@@ -212,7 +212,7 @@ def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
         "<a href='" + url + "' style='background:#534AB7;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Urune Git</a>"
     )
     data = {
-        "from": "onboarding@resend.dev",
+        "from": "bildirim@rafta.net",
         "to": email,
         "subject": "Fiyat dustu: " + (urun_adi or "Urun"),
         "html": html
