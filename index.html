@@ -99,7 +99,7 @@
     .auth-msg.success { background: #f0fdf4; color: #16a34a;       border: 1.5px solid #bbf7d0; }
 
     /* ── APP ────────────────────────────────────────── */
-    #app-screen { display: none; min-height: 100vh; background: var(--bg); padding-bottom: calc(var(--nav-h) + 8px); padding-top: 58px; }
+    #app-screen { display: none; min-height: 100vh; background: var(--bg); padding-bottom: calc(var(--nav-h) + 8px); padding-top: 58px; overflow-y: auto; }
 
     /* ── TOPBAR ─────────────────────────────────────── */
     .topbar {
@@ -130,7 +130,7 @@
     }
 
     /* ── SAYFALAR ───────────────────────────────────── */
-    .page { display: none; padding: 20px 16px 20px; max-width: 580px; margin: 0 auto; }
+    .page { display: none; padding: 24px 16px; max-width: 580px; margin: 0 auto; min-height: calc(100vh - 130px); }
     .page.active { display: block; }
 
     /* ── BOTTOM NAV ─────────────────────────────────── */
@@ -361,6 +361,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -529,6 +530,21 @@
   </div>
 </div>
 
+
+<!-- GEÇMİŞ MODALİ -->
+<div class="modal-overlay" id="chart-overlay" onclick="closeChartOutside(event)">
+  <div class="modal" style="padding-bottom:32px">
+    <div class="modal-handle"></div>
+    <h3 id="chart-title" style="margin-bottom:8px">Fiyat Geçmişi</h3>
+    <p id="chart-sub" style="font-size:13px;color:var(--muted);font-weight:500;margin-bottom:20px"></p>
+    <div id="chart-empty" style="display:none" class="empty"><div class="eicon">📊</div><p>Henüz fiyat geçmişi yok.<br>İlk kontrol sonrası burada görünecek.</p></div>
+    <div style="position:relative;height:220px" id="chart-wrap">
+      <canvas id="priceChart"></canvas>
+    </div>
+    <div id="chart-stats" style="display:flex;gap:10px;margin-top:16px"></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
@@ -603,6 +619,8 @@ sb.auth.onAuthStateChange((_e, session) => {
     const email = session.user.email;
     document.getElementById('profile-email').textContent  = email;
     document.getElementById('avatar-initials').textContent = email[0].toUpperCase();
+    document.getElementById('app-screen').scrollTop = 0;
+    window.scrollTo(0,0);
     loadProducts();
   } else {
     currentUser = null;
@@ -711,6 +729,10 @@ function cardHTML(p) {
           ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Rafımda`
           : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Rafıma Al`}
       </button>
+      <button class="btn-sm" onclick="showHistory(${p.id},'${(p.urun_adi||'Ürün').replace(/'/g,'')  }')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Geçmiş
+      </button>
       <button class="btn-sm del" onclick="deleteProduct(${p.id})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         Sil
@@ -798,6 +820,102 @@ window.deleteProduct = async id => {
   await loadProducts();
   renderAllProducts();
 };
+
+// Fiyat Geçmişi
+let chartInstance = null;
+
+window.closeChartOutside = e => { if(e.target.id==='chart-overlay') closeChart(); };
+window.closeChart = () => document.getElementById('chart-overlay').classList.remove('open');
+
+window.showHistory = async (id, name) => {
+  document.getElementById('chart-overlay').classList.add('open');
+  document.getElementById('chart-title').textContent = name;
+  document.getElementById('chart-sub').textContent = 'Günlük fiyat takibi';
+  document.getElementById('chart-empty').style.display = 'none';
+  document.getElementById('chart-wrap').style.display = 'block';
+  document.getElementById('chart-stats').innerHTML = '';
+
+  const { data, error } = await sb
+    .from('fiyat_gecmisi')
+    .select('fiyat, kontrol_tarihi')
+    .eq('urun_id', id)
+    .order('kontrol_tarihi', { ascending: true });
+
+  if (error || !data || data.length === 0) {
+    document.getElementById('chart-empty').style.display = 'block';
+    document.getElementById('chart-wrap').style.display = 'none';
+    return;
+  }
+
+  const labels = data.map(d => {
+    const dt = new Date(d.kontrol_tarihi);
+    return dt.toLocaleDateString('tr-TR', { day:'numeric', month:'short' });
+  });
+  const values = data.map(d => Number(d.fiyat));
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const last = values[values.length - 1];
+
+  // Stats
+  document.getElementById('chart-stats').innerHTML = `
+    <div style="flex:1;background:var(--bg);border-radius:12px;padding:12px;text-align:center;border:1.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">En Düşük</div>
+      <div style="font-size:16px;font-weight:800;color:var(--success);margin-top:4px">₺${min.toLocaleString('tr-TR')}</div>
+    </div>
+    <div style="flex:1;background:var(--bg);border-radius:12px;padding:12px;text-align:center;border:1.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Güncel</div>
+      <div style="font-size:16px;font-weight:800;color:var(--accent);margin-top:4px">₺${last.toLocaleString('tr-TR')}</div>
+    </div>
+    <div style="flex:1;background:var(--bg);border-radius:12px;padding:12px;text-align:center;border:1.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">En Yüksek</div>
+      <div style="font-size:16px;font-weight:800;color:var(--danger);margin-top:4px">₺${max.toLocaleString('tr-TR')}</div>
+    </div>`;
+
+  // Chart
+  if (chartInstance) chartInstance.destroy();
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: '#6C63FF',
+        backgroundColor: 'rgba(108,99,255,.1)',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#6C63FF',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.35,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => '₺' + ctx.parsed.y.toLocaleString('tr-TR')
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Figtree', size: 11 }, color: '#9494B0' } },
+        y: {
+          grid: { color: 'rgba(0,0,0,.05)' },
+          ticks: {
+            font: { family: 'Figtree', size: 11 }, color: '#9494B0',
+            callback: v => '₺' + v.toLocaleString('tr-TR')
+          }
+        }
+      }
+    }
+  });
+};
+
 </script>
 </body>
 </html>
