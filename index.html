@@ -533,7 +533,7 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <h3>Ürün Takibe Al</h3>
-    <div class="field"><label>Ürün Linki</label><input type="url" id="new-url" placeholder="https://www.trendyol.com/..." /></div>
+    <div class="field"><label>Ürün Linki</label><input type="url" id="new-url" placeholder="Trendyol, Bershka, Zara, H&M..." /></div>
     <div class="field"><label>Hedef Fiyat (₺)</label><input type="number" id="new-target" placeholder="örn. 450" min="0" step="0.01" /></div>
     <div class="field">
       <label>Kategori</label>
@@ -860,7 +860,10 @@ window.addProduct = async () => {
   const target = document.getElementById('new-target').value.trim();
   const cat    = document.getElementById('new-category').value;
   if (!url) { showToast('Link gerekli.','error'); return; }
-  if (!url.includes('trendyol.com')) { showToast('Trendyol linki gir.','error'); return; }
+  const desteklenen = ['trendyol.com','hepsiburada.com','zara.com','bershka.com','pullandbear.com','massimodutti.com','stradivarius.com','oysho.com','pazarama.com'];
+  if (!desteklenen.some(site => url.includes(site))) {
+    showToast('Desteklenmeyen site. Trendyol, Bershka, Zara vb. dene.','error'); return;
+  }
   const btn = document.getElementById('btn-add');
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
   const { error } = await sb.from('urunler').insert([{
