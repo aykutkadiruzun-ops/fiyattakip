@@ -656,12 +656,44 @@
   </div>
 </div>
 
+<!-- KOLEKSIYON PAYLAŞ MODALİ -->
+<div class="modal-overlay" id="share-collection-overlay" onclick="if(event.target.id==='share-collection-overlay')document.getElementById('share-collection-overlay').classList.remove('open')">
+  <div class="modal" style="padding-bottom:36px">
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:8px">Koleksiyonu Paylaş</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;font-weight:500">Bu linki paylaşarak koleksiyonunu başkalarına gösterebilirsin.</p>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="share-link-input" readonly style="flex:1;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-family:Figtree,sans-serif;font-size:13px;color:var(--muted);background:var(--bg)" />
+      <button class="btn-primary" style="width:auto;padding:12px 18px;white-space:nowrap" onclick="copyShareLink()">Kopyala</button>
+    </div>
+  </div>
+</div>
+
 <!-- KOLEKSIYONA EKLE MODALİ -->
 <div class="modal-overlay" id="add-to-collection-overlay" onclick="if(event.target.id==='add-to-collection-overlay')document.getElementById('add-to-collection-overlay').classList.remove('open')">
   <div class="modal" style="padding-bottom:36px;max-height:80vh;overflow-y:auto">
     <div class="modal-handle"></div>
     <h3 style="margin-bottom:16px">Koleksiyona Ürün Ekle</h3>
     <div id="add-to-collection-list"></div>
+  </div>
+</div>
+
+<!-- BİLDİRİM AYARLARI MODALİ -->
+<div class="modal-overlay" id="notif-settings-overlay" onclick="if(event.target.id==='notif-settings-overlay')document.getElementById('notif-settings-overlay').classList.remove('open')">
+  <div class="modal" style="padding-bottom:36px">
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:20px">Bildirim Ayarları</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer;font-size:15px;font-weight:600;color:var(--text)">
+        <input type="checkbox" id="notif-settings-hedef" style="width:20px;height:20px;accent-color:var(--accent)" />
+        Hedef fiyata ulaşınca bildir
+      </label>
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer;font-size:15px;font-weight:600;color:var(--text)">
+        <input type="checkbox" id="notif-settings-dusus" style="width:20px;height:20px;accent-color:var(--accent)" />
+        Fiyat her düştüğünde bildir
+      </label>
+    </div>
+    <button class="btn-primary" onclick="saveNotifSettings()">Kaydet</button>
   </div>
 </div>
 
@@ -929,6 +961,13 @@ function cardHTML(p) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         ${p.koleksiyon ? p.koleksiyon : 'Koleksiyon'}
       </button>
+      <button class="btn-sm" onclick="showNotifSettings(${p.id},${!!p.bildirim_hedef},${!!p.bildirim_dusus})" title="Bildirim ayarları">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Bildirim
+      </button>
+      <button class="btn-sm" onclick="manualUpdate(${p.id})" title="Fiyatı güncelle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-8.49"/></svg>
+      </button>
       <button class="btn-sm del" onclick="deleteProduct(${p.id})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         Sil
@@ -1098,13 +1137,19 @@ function renderCollections() {
     const urunler = allProducts.filter(p => p.koleksiyon === k);
     const aktif   = urunler.filter(p => !p.satin_alindi);
     return `
-    <div class="product-card" style="cursor:pointer" onclick="openCollection('${k.replace(/'/g,"\'")}')">
-      <div class="pc-header">
+    <div class="product-card">
+      <div class="pc-header" style="cursor:pointer" onclick="openCollection('${k.replace(/'/g,"\'")}')">
         <div class="pc-info">
           <div class="pc-name">${k}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px;font-weight:500">${aktif.length} ürün takipte</div>
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="pc-actions" style="margin-top:10px">
+        <button class="btn-sm" onclick="shareCollection('${k.replace(/'/g,"\'")}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Paylaş
+        </button>
       </div>
     </div>`;
   }).join('');
@@ -1329,6 +1374,57 @@ function renderStats() {
     ${aktif.length === 0 ? '<div class="empty"><div class="eicon">📊</div><p>İstatistik için ürün ekle.</p></div>' : ''}
   `;
 }
+
+// Bildirim Ayarları
+let notifSettingsId = null;
+
+window.showNotifSettings = (id, hedef, dusus) => {
+  notifSettingsId = id;
+  document.getElementById('notif-settings-hedef').checked = hedef;
+  document.getElementById('notif-settings-dusus').checked = dusus;
+  document.getElementById('notif-settings-overlay').classList.add('open');
+};
+
+window.saveNotifSettings = async () => {
+  const hedef = document.getElementById('notif-settings-hedef').checked;
+  const dusus = document.getElementById('notif-settings-dusus').checked;
+  const { error } = await sb.from('urunler')
+    .update({ bildirim_hedef: hedef, bildirim_dusus: dusus })
+    .eq('id', notifSettingsId);
+  if (error) { showToast('Hata.','error'); return; }
+  document.getElementById('notif-settings-overlay').classList.remove('open');
+  showToast('Bildirim ayarları kaydedildi ✅','success');
+  await loadProducts();
+  renderAllProducts();
+};
+
+// Manuel Fiyat Güncelleme
+window.manualUpdate = async (id) => {
+  showToast('Fiyat güncelleniyor...','');
+  // GitHub Actions webhook tetikleyemeyiz ama son fiyatı Supabase'den yenileyebiliriz
+  // Şimdilik sayfayı yenile
+  await loadProducts();
+  renderAllProducts();
+  showToast('Veriler güncellendi ✅','success');
+};
+
+// Koleksiyon Paylaşma
+window.shareCollection = name => {
+  const link = `${window.location.origin}?koleksiyon=${encodeURIComponent(name)}`;
+  document.getElementById('share-link-input').value = link;
+  document.getElementById('share-collection-overlay').classList.add('open');
+};
+
+window.copyShareLink = () => {
+  const input = document.getElementById('share-link-input');
+  navigator.clipboard.writeText(input.value).then(() => {
+    showToast('Link kopyalandı! 📋','success');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    showToast('Link kopyalandı! 📋','success');
+  });
+};
 
 // Sil
 window.deleteProduct = async id => {
