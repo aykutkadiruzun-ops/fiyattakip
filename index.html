@@ -779,18 +779,22 @@ window.showToast = (msg, type='') => {
 
 const parsePrice = n => {
   if (!n) return null;
-  let s = String(n).replace(/[^\d.,]/g, ''); // sadece rakam, nokta, virgül
-  // "3.610,00" formatı — binlik nokta + ondalık virgül
+  let s = String(n).replace(/[^\d.,]/g, '');
+  // "3.610,00" veya "3.610,5" — binlik nokta + ondalık virgül
   if (s.includes('.') && s.includes(',')) {
     s = s.replace(/\./g, '').replace(',', '.');
   }
-  // "3.610" formatı — binlik nokta, ondalık yok
-  else if (s.includes('.') && s.split('.').pop().length !== 2) {
+  // "3.610" — binlik nokta (ondalık kısmı 2'den fazla)
+  else if (s.includes('.') && s.split('.').pop().length > 2) {
     s = s.replace(/\./g, '');
   }
-  // "3610,00" formatı — ondalık virgül
-  else if (s.includes(',')) {
+  // "799,5" veya "3610,00" — ondalık virgül (1-2 basamak)
+  else if (s.includes(',') && s.split(',').pop().length <= 2) {
     s = s.replace(',', '.');
+  }
+  // "3610,500" gibi — virgülden sonra 3+ basamak, binlik ayraç
+  else if (s.includes(',')) {
+    s = s.replace(',', '');
   }
   const num = parseFloat(s);
   return isNaN(num) ? null : num;
