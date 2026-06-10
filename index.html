@@ -884,14 +884,9 @@ window.doSignup = async () => {
 window.doLogout = async () => { await sb.auth.signOut(); };
 
 window.sendFeedback = () => {
-  const email = currentUser?.email || '';
   const subject = encodeURIComponent('Rafta Geri Bildirim');
-  const body = encodeURIComponent('Merhaba,
-
-Geri bildirimim:
-
-');
-  window.open(`mailto:destek@rafta.net?subject=${subject}&body=${body}`);
+  const body = encodeURIComponent('Merhaba, geri bildirimim: ');
+  window.open('mailto:destek@rafta.net?subject=' + subject + '&body=' + body);
 };
 
 window.shareApp = async () => {
