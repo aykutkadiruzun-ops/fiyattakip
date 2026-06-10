@@ -102,14 +102,18 @@ def genel_fiyat_ve_adi(url):
         fiyat = None
 
         def parse_fiyat(raw):
-            # 1.290,00 -> 1290.00
+            # 1.290,00 veya 1.290,5 -> 1290.00
             if '.' in raw and ',' in raw:
                 raw = raw.replace('.', '').replace(',', '.')
-            # 1290,00 -> 1290.00
-            elif ',' in raw and len(raw.split(',')[-1]) == 2:
-                raw = raw.replace(',', '.')
-            # 1.290 -> 1290 (binlik nokta, ondalık yok)
-            elif '.' in raw and len(raw.split('.')[-1]) != 2:
+            # 1290,00 veya 799,5 -> ondalık virgül
+            elif ',' in raw:
+                parts = raw.split(',')
+                if len(parts[-1]) <= 2:
+                    raw = raw.replace(',', '.')
+                else:
+                    raw = raw.replace(',', '')
+            # 1.290 -> binlik nokta (ondalık değil)
+            elif '.' in raw and len(raw.split('.')[-1]) > 2:
                 raw = raw.replace('.', '')
             try:
                 return float(raw)
