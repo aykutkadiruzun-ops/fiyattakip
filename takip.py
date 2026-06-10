@@ -267,8 +267,28 @@ def kontrol_et(urun):
 # ── CALISTIR ──────────────────────────────────────────────────
 urunler = urunleri_getir()
 print(f"{len(urunler)} urun bulundu.")
-for urun in urunler:
+
+# Once guncelleme istegi olan urunleri isle
+istekli = [u for u in urunler if u.get("guncelleme_istegi")]
+diger   = [u for u in urunler if not u.get("guncelleme_istegi")]
+
+if istekli:
+    print(f"{len(istekli)} urun icin manuel guncelleme istegi var.")
+
+for urun in istekli + diger:
     try:
         kontrol_et(urun)
+        # Guncelleme istegini sifirla
+        if urun.get("guncelleme_istegi"):
+            headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY,
+                "Content-Type": "application/json"
+            }
+            http_patch(
+                SUPABASE_URL + "/rest/v1/urunler?id=eq." + str(urun["id"]),
+                headers,
+                {"guncelleme_istegi": False}
+            )
     except Exception as e:
         print("Hata:", urun.get("url"), "-", e)
