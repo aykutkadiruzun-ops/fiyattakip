@@ -351,6 +351,33 @@
     .btn-logout:hover { background: #fee2e2; }
 
     /* ── EMPTY ──────────────────────────────────────── */
+    .search-box {
+      position: relative; margin-bottom: 16px;
+    }
+    .search-box input {
+      width: 100%; padding: 12px 16px 12px 42px;
+      border: 1.5px solid var(--border); border-radius: 12px;
+      font-family: 'Figtree', sans-serif; font-size: 14px;
+      color: var(--text); background: var(--surface); outline: none;
+      transition: border-color .2s;
+    }
+    .search-box input:focus { border-color: var(--accent); }
+    .search-box svg {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); pointer-events: none;
+    }
+
+    .stat-detail-card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 20px; margin-bottom: 10px;
+      border: 1.5px solid var(--border); box-shadow: var(--shadow);
+    }
+    .stat-detail-card h4 { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 12px; }
+    .stat-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row .s-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .stat-row .s-val { font-size: 14px; font-weight: 800; color: var(--accent); }
+
     .empty { text-align: center; padding: 52px 20px; color: var(--muted); }
     .empty .eicon { font-size: 52px; margin-bottom: 14px; }
     .empty p { font-size: 15px; line-height: 1.6; font-weight: 500; }
@@ -477,6 +504,10 @@
       Ürünlerim
       <span id="product-count" style="font-size:13px;color:var(--muted);font-weight:600"></span>
     </div>
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="product-search" placeholder="Ürün ara..." oninput="filterProducts(this.value)" />
+    </div>
     <div id="all-products"></div>
   </div>
 
@@ -508,6 +539,13 @@
         </div>
         <span class="menu-arrow">›</span>
       </div>
+      <div class="menu-item" onclick="goPage('stats')">
+        <div class="menu-left">
+          <div class="menu-icon-wrap" style="background:#fff7ed">📊</div>
+          İstatistikler
+        </div>
+        <span class="menu-arrow">›</span>
+      </div>
     </div>
     <button class="btn-logout" onclick="doLogout()">Çıkış Yap</button>
   </div>
@@ -528,6 +566,12 @@
       <span id="collection-detail-title"></span>
     </div>
     <div id="collection-detail-products"></div>
+  </div>
+
+  <!-- İstatistikler -->
+  <div class="page" id="page-stats">
+    <div class="section-hd" style="margin-bottom:16px">İstatistikler</div>
+    <div id="stats-content"></div>
   </div>
 
   <!-- Rafımdakiler -->
@@ -766,6 +810,7 @@ window.goPage = name => {
   if (name==='notifications') renderNotifications();
   if (name==='shelf')         renderShelf();
   if (name==='collections')   renderCollections();
+  if (name==='stats')         renderStats();
 };
 
 // Modal
@@ -1190,6 +1235,80 @@ window.saveCollectionPicker = async () => {
   await loadProducts();
   renderAllProducts();
 };
+
+// Ürün Arama
+window.filterProducts = query => {
+  const q = query.toLowerCase().trim();
+  const el = document.getElementById('all-products');
+  const list = allProducts.filter(p => !p.satin_alindi);
+  
+  const filtered = q ? list.filter(p => 
+    (p.urun_adi || '').toLowerCase().includes(q) ||
+    (p.url || '').toLowerCase().includes(q) ||
+    (p.koleksiyon || '').toLowerCase().includes(q)
+  ) : list;
+
+  document.getElementById('product-count').textContent = filtered.length + ' ürün';
+  el.innerHTML = filtered.length ? filtered.map(cardHTML).join('') :
+    `<div class="empty"><div class="eicon">🔍</div><p>"${query}" için sonuç bulunamadı.</p></div>`;
+};
+
+// İstatistikler
+function renderStats() {
+  const el = document.getElementById('stats-content');
+  const aktif = allProducts.filter(p => !p.satin_alindi);
+  const rafta = allProducts.filter(p => p.satin_alindi);
+  const drops = aktif.filter(p => p.ilk_fiyat && p.son_fiyat && parsePrice(p.son_fiyat) < parsePrice(p.ilk_fiyat));
+  const targets = aktif.filter(p => p.hedef_fiyat && p.son_fiyat && parsePrice(p.son_fiyat) <= parsePrice(p.hedef_fiyat));
+  const toplamTasarruf = allProducts.reduce((s,p) => s + (parsePrice(p.tasarruf)||0), 0);
+  
+  // En çok düşen ürün
+  let enCokDusen = null;
+  let enCokDusenMiktar = 0;
+  drops.forEach(p => {
+    const diff = parsePrice(p.ilk_fiyat) - parsePrice(p.son_fiyat);
+    if (diff > enCokDusenMiktar) { enCokDusenMiktar = diff; enCokDusen = p; }
+  });
+
+  // En pahalı ürün
+  let enPahali = null;
+  let enPahaliMiktar = 0;
+  aktif.forEach(p => {
+    const f = parsePrice(p.son_fiyat);
+    if (f && f > enPahaliMiktar) { enPahaliMiktar = f; enPahali = p; }
+  });
+
+  // Koleksiyon sayısı
+  const koleksiyonSayisi = new Set(allProducts.filter(p=>p.koleksiyon).map(p=>p.koleksiyon)).size;
+
+  el.innerHTML = `
+    <div class="stat-detail-card">
+      <h4>Genel Bakış</h4>
+      <div class="stat-row"><span class="s-label">Takip edilen ürün</span><span class="s-val">${aktif.length}</span></div>
+      <div class="stat-row"><span class="s-label">Rafıma alınan</span><span class="s-val">${rafta.length}</span></div>
+      <div class="stat-row"><span class="s-label">Koleksiyon sayısı</span><span class="s-val">${koleksiyonSayisi}</span></div>
+      <div class="stat-row"><span class="s-label">Fiyatı düşen ürün</span><span class="s-val">${drops.length}</span></div>
+      <div class="stat-row"><span class="s-label">Hedefe ulaşan</span><span class="s-val">${targets.length}</span></div>
+    </div>
+
+    <div class="stat-detail-card">
+      <h4>Tasarruf</h4>
+      <div class="stat-row"><span class="s-label">Toplam tasarruf</span><span class="s-val" style="color:var(--success)">₺${toplamTasarruf.toLocaleString('tr-TR')}</span></div>
+      ${enCokDusen ? `<div class="stat-row"><span class="s-label">En çok düşen</span><span class="s-val" style="color:var(--accent);font-size:12px;max-width:160px;text-align:right">${enCokDusen.urun_adi||'Ürün'} (↓₺${enCokDusenMiktar.toLocaleString('tr-TR')})</span></div>` : ''}
+    </div>
+
+    ${enPahali ? `
+    <div class="stat-detail-card">
+      <h4>En Pahalı Takip</h4>
+      <div class="stat-row">
+        <span class="s-label" style="max-width:200px">${enPahali.urun_adi||'Ürün'}</span>
+        <span class="s-val">${fmt(enPahali.son_fiyat)}</span>
+      </div>
+    </div>` : ''}
+
+    ${aktif.length === 0 ? '<div class="empty"><div class="eicon">📊</div><p>İstatistik için ürün ekle.</p></div>' : ''}
+  `;
+}
 
 // Sil
 window.deleteProduct = async id => {
