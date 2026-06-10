@@ -627,6 +627,13 @@
         </div>
         <span class="menu-arrow">›</span>
       </div>
+      <div class="menu-item" onclick="sendFeedback()">
+        <div class="menu-left">
+          <div class="menu-icon-wrap" style="background:#eff6ff">💬</div>
+          Geri Bildirim Gönder
+        </div>
+        <span class="menu-arrow">›</span>
+      </div>
     </div>
     <button class="btn-logout" onclick="doLogout()">Çıkış Yap</button>
   </div>
@@ -875,6 +882,17 @@ window.doSignup = async () => {
 };
 
 window.doLogout = async () => { await sb.auth.signOut(); };
+
+window.sendFeedback = () => {
+  const email = currentUser?.email || '';
+  const subject = encodeURIComponent('Rafta Geri Bildirim');
+  const body = encodeURIComponent('Merhaba,
+
+Geri bildirimim:
+
+');
+  window.open(`mailto:destek@rafta.net?subject=${subject}&body=${body}`);
+};
 
 window.shareApp = async () => {
   const shareData = {
