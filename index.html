@@ -378,6 +378,14 @@
     .stat-row .s-label { font-size: 14px; font-weight: 600; color: var(--text); }
     .stat-row .s-val { font-size: 14px; font-weight: 800; color: var(--accent); }
 
+    .more-menu-item {
+      padding: 11px 14px; font-size: 13px; font-weight: 600;
+      color: var(--text); display: flex; align-items: center; gap: 8px;
+      cursor: pointer; border-bottom: 1px solid var(--border); transition: background .15s;
+    }
+    .more-menu-item:last-child { border-bottom: none; }
+    .more-menu-item:hover { background: var(--surface); }
+
     .empty { text-align: center; padding: 52px 20px; color: var(--muted); }
     .empty .eicon { font-size: 52px; margin-bottom: 14px; }
     .empty p { font-size: 15px; line-height: 1.6; font-weight: 500; }
@@ -1020,27 +1028,33 @@ function cardHTML(p) {
       <button class="btn-sm shelf-btn ${p.satin_alindi?'done':''}" onclick="toggleShelf(${p.id},${!!p.satin_alindi})">
         ${p.satin_alindi
           ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Rafımda`
-          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Rafıma Al`}
+          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/></svg> Rafıma Al`}
       </button>
-      <button class="btn-sm" onclick="showHistory(${p.id},'${(p.urun_adi||'Ürün').replace(/'/g,'')  }')">
+      <button class="btn-sm" onclick="showHistory(${p.id},'${(p.urun_adi||'Ürün').replace(/'/g,'')}')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Geçmiş
-      </button>
-      <button class="btn-sm" onclick="showCollectionPicker(${p.id},'${(p.koleksiyon||'').replace(/'/g,'')}')" title="Koleksiyona ekle">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        ${p.koleksiyon ? p.koleksiyon : 'Koleksiyon'}
-      </button>
-      <button class="btn-sm" onclick="showNotifSettings(${p.id},${!!p.bildirim_hedef},${!!p.bildirim_dusus})" title="Bildirim ayarları">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        Bildirim
-      </button>
-      <button class="btn-sm" onclick="manualUpdate(${p.id})" title="Fiyatı güncelle">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-8.49"/></svg>
       </button>
       <button class="btn-sm del" onclick="deleteProduct(${p.id})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         Sil
       </button>
+      <button class="btn-sm" onclick="toggleMoreMenu(${p.id})" id="more-btn-${p.id}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+    </div>
+    <div class="more-menu" id="more-menu-${p.id}" style="display:none;margin-top:8px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border);overflow:hidden">
+      <div class="more-menu-item" onclick="showCollectionPicker(${p.id},'${(p.koleksiyon||'').replace(/'/g,'')}');toggleMoreMenu(${p.id})">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        ${p.koleksiyon ? `Koleksiyon: ${p.koleksiyon}` : 'Koleksiyona Ekle'}
+      </div>
+      <div class="more-menu-item" onclick="showNotifSettings(${p.id},${!!p.bildirim_hedef},${!!p.bildirim_dusus});toggleMoreMenu(${p.id})">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Bildirim Ayarları
+      </div>
+      <div class="more-menu-item" onclick="manualUpdate(${p.id});toggleMoreMenu(${p.id})">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-8.49"/></svg>
+        Fiyatı Güncelle
+      </div>
     </div>
   </div>`;
 }
@@ -1516,6 +1530,17 @@ window.copyShareLink = () => {
     document.execCommand('copy');
     showToast('Link kopyalandı! 📋','success');
   });
+};
+
+// Üç Nokta Menü
+window.toggleMoreMenu = id => {
+  const menu = document.getElementById('more-menu-' + id);
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  // Tüm menüleri kapat
+  document.querySelectorAll('.more-menu').forEach(m => m.style.display = 'none');
+  // Tıklanan menüyü aç/kapat
+  if (!isOpen) menu.style.display = 'block';
 };
 
 // Sil
