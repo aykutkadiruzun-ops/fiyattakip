@@ -28,6 +28,23 @@
       --nav-h:    72px;
     }
 
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary:  #A89CFF;
+        --accent:   #8B85FF;
+        --accent2:  #A89CFF;
+        --bg:       #0F0F14;
+        --surface:  #1A1A24;
+        --border:   #2A2A3A;
+        --text:     #E8E8F0;
+        --muted:    #6A6A8A;
+        --success:  #34D399;
+        --danger:   #F87171;
+        --warning:  #FBBF24;
+        --shadow:   0 1px 12px rgba(0,0,0,.3);
+      }
+    }
+
     body {
       font-family: 'Figtree', sans-serif;
       background: var(--bg);
@@ -42,6 +59,7 @@
       display: flex; align-items: center; justify-content: center;
       padding: 24px;
       background: linear-gradient(160deg, #1e1f35 0%, #2B2D42 60%, #3d3080 100%);
+      color-scheme: light dark;
     }
 
     .auth-card {
@@ -103,14 +121,14 @@
 
     /* ── TOPBAR ─────────────────────────────────────── */
     .topbar {
-      background: var(--primary);
+      background: #1A1A24;
       padding: 0 20px; height: 58px;
       display: flex; align-items: center; justify-content: space-between;
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     }
 
-    .topbar-logo { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.4px; }
-    .topbar-logo span { color: var(--accent2); }
+    .topbar-logo { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.4px; }
+    .topbar-logo span { color: var(--accent); }
 
     .topbar-right { display: flex; align-items: center; gap: 6px; }
 
@@ -139,6 +157,7 @@
       height: var(--nav-h);
       background: var(--surface);
       border-top: 1px solid var(--border);
+      color-scheme: light dark;
       display: flex; align-items: center; justify-content: space-around;
       z-index: 100; padding: 0 12px 8px;
     }
@@ -192,7 +211,7 @@
     .stat-card.green  .val { color: var(--success); }
 
     .saving-banner {
-      background: var(--primary);
+      background: linear-gradient(135deg, #4f46e5 0%, #6C63FF 100%);
       border-radius: var(--radius); padding: 20px 22px; color: #fff;
       margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between;
       box-shadow: 0 4px 20px rgba(43,45,66,.15); position: relative; overflow: hidden;
@@ -410,7 +429,9 @@
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <meta name="theme-color" content="#2B2D42" />
+  <meta name="theme-color" content="#2B2D42" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0F0F14" media="(prefers-color-scheme: dark)" />
+  <meta name="color-scheme" content="light dark" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
