@@ -410,6 +410,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <meta name="theme-color" content="#2B2D42" />
 </head>
 <body>
 
@@ -582,6 +583,15 @@
           İstatistikler
         </div>
         <span class="menu-arrow">›</span>
+      </div>
+    </div>
+    <div class="menu-list" style="margin-bottom:12px">
+      <div class="menu-item" onclick="requestPushPermission()">
+        <div class="menu-left">
+          <div class="menu-icon-wrap" style="background:#fef3c7">🔔</div>
+          <span id="push-menu-label">Push Bildirimleri Aç</span>
+        </div>
+        <span class="menu-arrow" id="push-menu-arrow">›</span>
       </div>
     </div>
     <button class="btn-logout" onclick="doLogout()">Çıkış Yap</button>
@@ -828,6 +838,67 @@ window.doSignup = async () => {
 
 window.doLogout = async () => { await sb.auth.signOut(); };
 
+// Push Bildirimleri
+const VAPID_PUBLIC_KEY = "dkYxR9cGnXN58cmXor6KuncNndH5TKO9BSwcQTCkBb57TZk_Id9-gzaGulIvfcXKzMt5p3UToDM7BzBPZruh9A";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function checkPushStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  const perm = Notification.permission;
+  const label = document.getElementById('push-menu-label');
+  const arrow = document.getElementById('push-menu-arrow');
+  if (!label) return;
+  if (perm === 'granted') {
+    label.textContent = 'Push Bildirimleri Açık ✅';
+    if (arrow) arrow.textContent = '';
+  } else if (perm === 'denied') {
+    label.textContent = 'Bildirim izni reddedildi';
+    if (arrow) arrow.textContent = '';
+  }
+}
+
+window.requestPushPermission = async () => {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showToast('Tarayıcın push bildirimi desteklemiyor.', 'error');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    showToast('Push bildirimleri zaten açık!', 'success');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') {
+    showToast('Bildirim izni reddedildi.', 'error');
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    const { data: { user } } = await sb.auth.getUser();
+    await sb.from('push_subscriptions').upsert({
+      email: user.email,
+      subscription: sub.toJSON()
+    }, { onConflict: 'email' });
+    showToast('Push bildirimleri açıldı! 🔔', 'success');
+    checkPushStatus();
+  } catch(e) {
+    console.error(e);
+    showToast('Push kayıt hatası: ' + e.message, 'error');
+  }
+};
+
 // Şifre Sıfırlama
 window.doResetPassword = async () => {
   const pass    = document.getElementById('new-password').value;
@@ -947,6 +1018,7 @@ async function loadProducts() {
   allProducts = data || [];
   renderDashboard();
   renderHomeProducts();
+  checkPushStatus();
 }
 
 // Dashboard
