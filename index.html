@@ -1409,11 +1409,13 @@ window.manualUpdate = async (id) => {
   }
   showToast('Fiyat güncelleniyor...','');
   try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || SUPABASE_ANON;
     const res = await fetch('https://uwxfrbljvmwtxecnqgrl.supabase.co/functions/v1/fiyat-guncelle', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + 'sb_publishable_L567-kgj8bZmK6uhMABbkA_VwhqrGCn'
+        'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({ urun_id: id })
     });
