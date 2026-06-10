@@ -623,6 +623,19 @@
       <input type="text" id="new-koleksiyon" placeholder="örn. Yaz Koleksiyonu, Ev Dekorasyonu..." list="koleksiyon-list" />
       <datalist id="koleksiyon-list"></datalist>
     </div>
+    <div class="field">
+      <label>Bildirim Tercihleri</label>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text)">
+          <input type="checkbox" id="notif-hedef" checked style="width:18px;height:18px;accent-color:var(--accent)" />
+          Hedef fiyata ulaşınca bildir
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text)">
+          <input type="checkbox" id="notif-dusus" style="width:18px;height:18px;accent-color:var(--accent)" />
+          Fiyat her düştüğünde bildir
+        </label>
+      </div>
+    </div>
     <button class="btn-primary" id="btn-add" onclick="addProduct()">Rafta Takibe Al</button>
   </div>
 </div>
@@ -886,6 +899,8 @@ function cardHTML(p) {
   }
   if (p.hedef_fiyat && !onTarget) chips.push(`<span class="chip gray">Hedef: ${fmt(p.hedef_fiyat)}</span>`);
   if (p.tasarruf && Number(p.tasarruf)>0) chips.push(`<span class="chip green">💰 ₺${Number(p.tasarruf).toLocaleString('tr-TR')} tasarruf</span>`);
+  if (p.bildirim_dusus) chips.push(`<span class="chip gray">🔔 Her düşüşte</span>`);
+  else if (p.bildirim_hedef && p.hedef_fiyat) chips.push(`<span class="chip gray">🔔 Hedefe ulaşınca</span>`);
 
   return `
   <div class="product-card ${cls}">
@@ -1017,17 +1032,23 @@ window.addProduct = async () => {
   const btn = document.getElementById('btn-add');
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
   const koleksiyon = document.getElementById('new-koleksiyon').value.trim();
+  const notifHedef = document.getElementById('notif-hedef').checked;
+  const notifDusus = document.getElementById('notif-dusus').checked;
   const { error } = await sb.from('urunler').insert([{
     url, email: currentUser.email,
     hedef_fiyat: target ? parseFloat(target) : null,
     urun_adi: cat || null,
     koleksiyon: koleksiyon || null,
+    bildirim_hedef: notifHedef,
+    bildirim_dusus: notifDusus,
   }]);
   btn.innerHTML='Rafta Takibe Al'; btn.disabled=false;
   if (error) { showToast('Eklenemedi: '+error.message,'error'); return; }
   document.getElementById('new-url').value='';
   document.getElementById('new-target').value='';
   document.getElementById('new-koleksiyon').value='';
+  document.getElementById('notif-hedef').checked=true;
+  document.getElementById('notif-dusus').checked=false;
   closeModal();
   showToast('Ürün rafa eklendi! ✅','success');
   loadProducts();
