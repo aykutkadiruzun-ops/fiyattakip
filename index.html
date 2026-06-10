@@ -620,6 +620,13 @@
         </div>
         <span class="menu-arrow" id="push-menu-arrow">›</span>
       </div>
+      <div class="menu-item" onclick="shareApp()">
+        <div class="menu-left">
+          <div class="menu-icon-wrap" style="background:#f0fdf4">🚀</div>
+          Arkadaşına Öner
+        </div>
+        <span class="menu-arrow">›</span>
+      </div>
     </div>
     <button class="btn-logout" onclick="doLogout()">Çıkış Yap</button>
   </div>
@@ -868,6 +875,31 @@ window.doSignup = async () => {
 };
 
 window.doLogout = async () => { await sb.auth.signOut(); };
+
+window.shareApp = async () => {
+  const shareData = {
+    title: 'Rafta — Fiyat Takip',
+    text: 'Trendyol, Bershka ve daha fazlasında fiyatları otomatik takip et, indirim gelince haber al!',
+    url: 'https://rafta.net'
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch(e) {
+      if (e.name !== 'AbortError') copyAppLink();
+    }
+  } else {
+    copyAppLink();
+  }
+};
+
+function copyAppLink() {
+  navigator.clipboard.writeText('https://rafta.net').then(() => {
+    showToast('Link kopyalandı! 📋','success');
+  }).catch(() => {
+    showToast('rafta.net','success');
+  });
+}
 
 // Push Bildirimleri
 const VAPID_PUBLIC_KEY = "dkYxR9cGnXN58cmXor6KuncNndH5TKO9BSwcQTCkBb57TZk_Id9-gzaGulIvfcXKzMt5p3UToDM7BzBPZruh9A";
