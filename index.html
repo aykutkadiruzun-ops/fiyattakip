@@ -1024,7 +1024,6 @@ window.deleteFromShelf = async id => {
 window.addProduct = async () => {
   const url    = document.getElementById('new-url').value.trim();
   const target = document.getElementById('new-target').value.trim();
-  const cat    = document.getElementById('new-category').value;
   if (!url) { showToast('Link gerekli.','error'); return; }
   if (!url.startsWith('http')) {
     showToast('Geçerli bir link gir.','error'); return;
@@ -1037,7 +1036,7 @@ window.addProduct = async () => {
   const { error } = await sb.from('urunler').insert([{
     url, email: currentUser.email,
     hedef_fiyat: target ? parseFloat(target) : null,
-    urun_adi: cat || null,
+    urun_adi: null,
     koleksiyon: koleksiyon || null,
     bildirim_hedef: notifHedef,
     bildirim_dusus: notifDusus,
