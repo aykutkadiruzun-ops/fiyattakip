@@ -241,18 +241,25 @@ def kontrol_et(urun):
     gecmise_kaydet(urun_id, yeni_fiyat)
     fiyat_guncelle(urun_id, yeni_fiyat, urun_adi)
 
-    if eski_fiyat and eski_fiyat != yeni_fiyat:
-        print("Fiyat degisti! Email gonderiliyor...")
-        email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
+    bildirim_dusus = urun.get("bildirim_dusus", False)
+    bildirim_hedef = urun.get("bildirim_hedef", True)
+
+    fiyat_dustu = eski_fiyat and eski_fiyat != yeni_fiyat
+
+    if fiyat_dustu:
+        print("Fiyat degisti!")
+        if bildirim_dusus:
+            print("Her dusus bildirimi aktif, email gonderiliyor...")
+            email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
     else:
         print("Fiyat degismedi.")
 
     hedef_fiyat = urun.get("hedef_fiyat")
-    if hedef_fiyat:
+    if hedef_fiyat and bildirim_hedef:
         try:
             yeni_sayi = float(re.sub(r'[^\d,]', '', yeni_fiyat).replace(',', '.'))
             if yeni_sayi <= float(hedef_fiyat):
-                print("Hedef fiyata ulasildi!")
+                print("Hedef fiyata ulasildi! Email gonderiliyor...")
                 email_gonder(email, urun_adi, eski_fiyat or "-", yeni_fiyat + " (HEDEF FIYATA ULASILDI!)", url)
         except Exception as e:
             print("Hedef fiyat kontrolu hatasi:", e)
