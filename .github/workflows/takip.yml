@@ -2,7 +2,7 @@ name: Fiyat Takip
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 5,10,17 * * *'
   workflow_dispatch:
 
 jobs:
