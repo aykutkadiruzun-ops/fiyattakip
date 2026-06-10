@@ -5,11 +5,20 @@ import json
 import re
 import urllib.request
 import urllib.parse
+try:
+    from pywebpush import webpush, WebPushException
+    WEBPUSH_AVAILABLE = True
+except ImportError:
+    WEBPUSH_AVAILABLE = False
+    print("pywebpush yuklu degil, push bildirimleri devre disi")
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 RESEND_KEY = os.environ.get("RESEND_KEY", "re_4Q6m5BmF_BibZvq3izfs193Huzhy2tj26")
 SCRAPER_KEY = os.environ.get("SCRAPER_KEY", "e69fb8c04518138c28881d88931b8e14")
+VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "cApnH3gBpH5eUBuJ0LkJp2Ay-8ql4lbrDKQrDG5UVPqhRANCAAR2RjFH1wadc3nxyZeivoq6dw2d0flMo70FLBxBMKQFvntNmT8h336DNoa6Ui99xcrMy3mndROgMzsHME9mu6H0")
+VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC", "dkYxR9cGnXN58cmXor6KuncNndH5TKO9BSwcQTCkBb57TZk_Id9-gzaGulIvfcXKzMt5p3UToDM7BzBPZruh9A")
+VAPID_EMAIL = "mailto:bildirim@rafta.net"
 
 def http_get(url, headers):
     req = urllib.request.Request(url, headers=headers)
@@ -189,6 +198,37 @@ def gecmise_kaydet(urun_id, fiyat):
         {"urun_id": urun_id, "fiyat": fiyat}
     )
 
+def push_subscriptions_getir(email):
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+    }
+    try:
+        return http_get(
+            SUPABASE_URL + "/rest/v1/push_subscriptions?email=eq." + urllib.parse.quote(email) + "&select=subscription",
+            headers
+        )
+    except:
+        return []
+
+def push_gonder(email, title, body, url):
+    if not WEBPUSH_AVAILABLE:
+        return
+    subscriptions = push_subscriptions_getir(email)
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info=sub["subscription"],
+                data=json.dumps({"title": title, "body": body, "url": url}),
+                vapid_private_key=VAPID_PRIVATE,
+                vapid_claims={"sub": VAPID_EMAIL}
+            )
+            print("Push gonderildi:", email)
+        except WebPushException as e:
+            print("Push hatasi:", e)
+        except Exception as e:
+            print("Push hatasi:", e)
+
 def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
     headers = {
         "Authorization": "Bearer " + RESEND_KEY,
@@ -249,8 +289,9 @@ def kontrol_et(urun):
     if fiyat_dustu:
         print("Fiyat degisti!")
         if bildirim_dusus:
-            print("Her dusus bildirimi aktif, email gonderiliyor...")
+            print("Her dusus bildirimi aktif, bildirim gonderiliyor...")
             email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
+            push_gonder(email, "Fiyat dustu! 📉", f"{urun_adi or 'Urun'}: {yeni_fiyat}", url)
     else:
         print("Fiyat degismedi.")
 
@@ -259,8 +300,9 @@ def kontrol_et(urun):
         try:
             yeni_sayi = float(re.sub(r'[^\d,]', '', yeni_fiyat).replace(',', '.'))
             if yeni_sayi <= float(hedef_fiyat):
-                print("Hedef fiyata ulasildi! Email gonderiliyor...")
+                print("Hedef fiyata ulasildi! Bildirim gonderiliyor...")
                 email_gonder(email, urun_adi, eski_fiyat or "-", yeni_fiyat + " (HEDEF FIYATA ULASILDI!)", url)
+                push_gonder(email, "Hedefe ulasti! 🎯", f"{urun_adi or 'Urun'} hedef fiyata ulasti: {yeni_fiyat}", url)
         except Exception as e:
             print("Hedef fiyat kontrolu hatasi:", e)
 
