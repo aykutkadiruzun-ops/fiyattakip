@@ -230,7 +230,7 @@
 
     .pc-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
     .pc-info { flex: 1; min-width: 0; }
-    .pc-name { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--text); }
+    .pc-name { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
     .pc-url {
       font-size: 11px; color: var(--accent); text-decoration: none;
       display: block; overflow: hidden; text-overflow: ellipsis;
