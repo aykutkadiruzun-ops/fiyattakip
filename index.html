@@ -943,6 +943,8 @@ function cardHTML(p) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Ürüne Git
         </a>
+        ${p.updated_at ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-weight:500">Son güncelleme: ${new Date(p.updated_at).toLocaleDateString('tr-TR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+        ${p.guncelleme_istegi ? `<div style="font-size:11px;color:var(--warning);margin-top:2px;font-weight:600">⏳ Güncelleme bekleniyor...</div>` : ''}
       </div>
       <div class="pc-price-block">${priceHTML}</div>
     </div>
@@ -1400,12 +1402,11 @@ window.saveNotifSettings = async () => {
 
 // Manuel Fiyat Güncelleme
 window.manualUpdate = async (id) => {
-  showToast('Fiyat güncelleniyor...','');
-  // GitHub Actions webhook tetikleyemeyiz ama son fiyatı Supabase'den yenileyebiliriz
-  // Şimdilik sayfayı yenile
-  await loadProducts();
-  renderAllProducts();
-  showToast('Veriler güncellendi ✅','success');
+  const { error } = await sb.from('urunler')
+    .update({ guncelleme_istegi: true })
+    .eq('id', id);
+  if (error) { showToast('Hata.','error'); return; }
+  showToast('Güncelleme isteği gönderildi! En geç 6 saatte işlenecek. ✅','success');
 };
 
 // Koleksiyon Paylaşma
