@@ -405,6 +405,35 @@
 </head>
 <body>
 
+<!-- ŞİFRE SIFIRLAMA EKRANI -->
+<div id="reset-screen" style="display:none;min-height:100vh;display:none;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#1e1f35 0%,#2B2D42 60%,#3d3080 100%)">
+  <div class="auth-card">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M4 8L12 4L20 8" stroke="#6C63FF" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M4 12L12 8L20 12" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+          <path d="M6 16L12 19L18 16" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity=".4"/>
+        </svg>
+      </div>
+      <div class="logo-text">rafta<span>.</span></div>
+    </div>
+    <h3 style="font-size:18px;font-weight:800;margin-bottom:8px">Yeni Şifre Belirle</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:24px;font-weight:500">Hesabın için yeni bir şifre gir.</p>
+    <div class="form-group">
+      <label>Yeni Şifre</label>
+      <input type="password" id="new-password" placeholder="En az 6 karakter" />
+    </div>
+    <div class="form-group">
+      <label>Şifre Tekrar</label>
+      <input type="password" id="new-password-confirm" placeholder="Şifreyi tekrar gir" onkeydown="if(event.key==='Enter')doResetPassword()" />
+    </div>
+    <button class="btn-primary" id="btn-reset" onclick="doResetPassword()">Şifremi Güncelle</button>
+    <div class="auth-msg error"   id="reset-error"></div>
+    <div class="auth-msg success" id="reset-success"></div>
+  </div>
+</div>
+
 <!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-card">
@@ -791,6 +820,37 @@ window.doSignup = async () => {
 
 window.doLogout = async () => { await sb.auth.signOut(); };
 
+// Şifre Sıfırlama
+window.doResetPassword = async () => {
+  const pass    = document.getElementById('new-password').value;
+  const confirm = document.getElementById('new-password-confirm').value;
+  if (!pass || pass.length < 6) {
+    document.getElementById('reset-error').textContent = 'Şifre en az 6 karakter olmalı.';
+    document.getElementById('reset-error').style.display = 'block';
+    return;
+  }
+  if (pass !== confirm) {
+    document.getElementById('reset-error').textContent = 'Şifreler eşleşmiyor.';
+    document.getElementById('reset-error').style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('btn-reset');
+  btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+  const { error } = await sb.auth.updateUser({ password: pass });
+  btn.innerHTML = 'Şifremi Güncelle'; btn.disabled = false;
+  if (error) {
+    document.getElementById('reset-error').textContent = error.message;
+    document.getElementById('reset-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('reset-success').textContent = '✅ Şifren güncellendi! Giriş yapabilirsin.';
+  document.getElementById('reset-success').style.display = 'block';
+  setTimeout(() => {
+    document.getElementById('reset-screen').style.display = 'none';
+    document.getElementById('auth-screen').style.display = '';
+  }, 2000);
+};
+
 window.showForgotPassword = () => {
   document.getElementById('login-form').style.display = 'none';
   document.getElementById('forgot-form').style.display = 'block';
@@ -828,6 +888,13 @@ function showErr(msg) {
 
 // Session
 sb.auth.onAuthStateChange((_e, session) => {
+  // Şifre sıfırlama token'ı
+  if (_e === 'PASSWORD_RECOVERY') {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'none';
+    document.getElementById('reset-screen').style.display = 'flex';
+    return;
+  }
   if (session) {
     currentUser = session.user;
     document.getElementById('auth-screen').style.display = 'none';
@@ -1415,7 +1482,8 @@ window.manualUpdate = async (id) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + token,
+        'apikey': SUPABASE_ANON
       },
       body: JSON.stringify({ urun_id: id })
     });
