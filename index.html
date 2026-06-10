@@ -1583,7 +1583,15 @@ window.showHistory = async (id, name) => {
     const dt = new Date(d.kontrol_tarihi);
     return dt.toLocaleDateString('tr-TR', { day:'numeric', month:'short' });
   });
-  const values = data.map(d => Number(d.fiyat));
+  const values = data.map(d => {
+    const p = parsePrice(d.fiyat);
+    return p || 0;
+  }).filter(v => v > 0);
+  if (!values.length) {
+    document.getElementById('chart-empty').style.display = 'block';
+    document.getElementById('chart-wrap').style.display = 'none';
+    return;
+  }
 
   const min = Math.min(...values);
   const max = Math.max(...values);
