@@ -987,11 +987,14 @@ window.requestPushPermission = async () => {
     showToast('Tarayıcın push bildirimi desteklemiyor.', 'error');
     return;
   }
-  if (Notification.permission === 'granted') {
-    showToast('Push bildirimleri zaten açık!', 'success');
+  let perm = Notification.permission;
+  if (perm === 'denied') {
+    showToast('Bildirim izni reddedildi.', 'error');
     return;
   }
-  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') {
+    perm = await Notification.requestPermission();
+  }
   if (perm !== 'granted') {
     showToast('Bildirim izni reddedildi.', 'error');
     return;
@@ -1004,10 +1007,15 @@ window.requestPushPermission = async () => {
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
     });
     const { data: { user } } = await sb.auth.getUser();
-    await sb.from('push_subscriptions').upsert({
+    const { error } = await sb.from('push_subscriptions').upsert({
       email: user.email,
       subscription: sub.toJSON()
     }, { onConflict: 'email' });
+    if (error) {
+      console.error('Supabase push kayit hatasi:', error);
+      showToast('Push kayıt hatası: ' + error.message, 'error');
+      return;
+    }
     showToast('Push bildirimleri açıldı! 🔔', 'success');
     checkPushStatus();
   } catch(e) {
@@ -1015,8 +1023,6 @@ window.requestPushPermission = async () => {
     showToast('Push kayıt hatası: ' + e.message, 'error');
   }
 };
-
-// Şifre Sıfırlama
 window.doResetPassword = async () => {
   const pass    = document.getElementById('new-password').value;
   const confirm = document.getElementById('new-password-confirm').value;
