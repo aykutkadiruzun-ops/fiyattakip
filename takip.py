@@ -17,8 +17,8 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supa
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 RESEND_KEY = os.environ.get("RESEND_KEY", "re_4Q6m5BmF_BibZvq3izfs193Huzhy2tj26")
 SCRAPER_KEY = os.environ.get("SCRAPER_KEY", "e69fb8c04518138c28881d88931b8e14")
-VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "cApnH3gBpH5eUBuJ0LkJp2Ay-8ql4lbrDKQrDG5UVPqhRANCAAR2RjFH1wadc3nxyZeivoq6dw2d0flMo70FLBxBMKQFvntNmT8h336DNoa6Ui99xcrMy3mndROgMzsHME9mu6H0")
-VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC", "dkYxR9cGnXN58cmXor6KuncNndH5TKO9BSwcQTCkBb57TZk_Id9-gzaGulIvfcXKzMt5p3UToDM7BzBPZruh9A")
+VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "aDUEzHzPJ5-w1LuFElyE-tGuaQhD-0PD4Rydv5fZlfY")
+VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC", "BHL4ii9uolfxPW3fzzmtAknAQO7gn5DjmwSmZ14lKTBDJRP7P5-O_v-Apq9ftRd1kCZOVn4qP_dMAtMWY9G9pmY")
 VAPID_EMAIL = "mailto:bildirim@rafta.net"
 
 def http_get(url, headers):
