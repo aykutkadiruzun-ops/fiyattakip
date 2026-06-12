@@ -8,6 +8,7 @@ import urllib.parse
 try:
     from pywebpush import webpush, WebPushException
     WEBPUSH_AVAILABLE = True
+    print("pywebpush yuklu, push aktif")
 except ImportError:
     WEBPUSH_AVAILABLE = False
     print("pywebpush yuklu degil, push bildirimleri devre disi")
@@ -58,7 +59,6 @@ def scraper_get(target_url, render_js=True):
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read().decode("utf-8")
 
-# ── TRENDYOL ──────────────────────────────────────────────────
 def trendyol_fiyat_ve_adi(url):
     try:
         with sync_playwright() as p:
@@ -95,24 +95,20 @@ def trendyol_fiyat_ve_adi(url):
         print("Trendyol hatasi:", e)
         return None, None
 
-# ── SCRAPER API İLE DİĞER SİTELER ────────────────────────────
 def genel_fiyat_ve_adi(url):
     try:
         content = scraper_get(url, render_js=True)
         fiyat = None
 
         def parse_fiyat(raw):
-            # 1.290,00 veya 1.290,5 -> 1290.00
             if '.' in raw and ',' in raw:
                 raw = raw.replace('.', '').replace(',', '.')
-            # 1290,00 veya 799,5 -> ondalık virgül
             elif ',' in raw:
                 parts = raw.split(',')
                 if len(parts[-1]) <= 2:
                     raw = raw.replace(',', '.')
                 else:
                     raw = raw.replace(',', '')
-            # 1.290 -> binlik nokta (ondalık değil)
             elif '.' in raw and len(raw.split('.')[-1]) > 2:
                 raw = raw.replace('.', '')
             try:
@@ -120,14 +116,12 @@ def genel_fiyat_ve_adi(url):
             except:
                 return None
 
-        # 1. JSON price field
         m = re.search(r'"price"\s*:\s*"?([\d.,]+)"?', content)
         if m:
             val = parse_fiyat(m.group(1))
             if val and val > 1:
                 fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
 
-        # 2. 1.290,00 TL formatı
         if not fiyat:
             matches = re.findall(r'(\d{1,3}(?:\.\d{3})+,\d{2})\s*(?:TL|₺)', content)
             if matches:
@@ -135,7 +129,6 @@ def genel_fiyat_ve_adi(url):
                 if val and val > 1:
                     fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
 
-        # 3. 1290,00 TL formatı
         if not fiyat:
             matches = re.findall(r'(\d{3,6},\d{2})\s*(?:TL|₺)', content)
             if matches:
@@ -143,7 +136,6 @@ def genel_fiyat_ve_adi(url):
                 if val and val > 1:
                     fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
 
-        # 4. Tam sayı fiyat
         if not fiyat:
             matches = re.findall(r'(\d{2,6})\s*(?:TL|₺)', content)
             if matches:
@@ -151,7 +143,6 @@ def genel_fiyat_ve_adi(url):
                 if val > 1:
                     fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
 
-        # Ürün adı
         urun_adi = None
         for pattern in [r'<h1[^>]*class="[^"]*product[^"]*"[^>]*>([^<]+)</h1>',
                         r'"name"\s*:\s*"([^"]{5,100})"',
@@ -167,7 +158,6 @@ def genel_fiyat_ve_adi(url):
         print("Genel scraper hatasi:", e)
         return None, None
 
-# ── SUPABASE ──────────────────────────────────────────────────
 def urunleri_getir():
     headers = {
         "apikey": SUPABASE_KEY,
@@ -208,17 +198,50 @@ def push_subscriptions_getir(email):
         "Authorization": "Bearer " + SUPABASE_KEY
     }
     try:
-        return http_get(
+        result = http_get(
             SUPABASE_URL + "/rest/v1/push_subscriptions?email=eq." + urllib.parse.quote(email) + "&select=subscription",
             headers
         )
-    except:
+        print("Subscription sorgu sonucu:", result)
+        return result
+    except Exception as e:
+        print("Subscription getirme hatasi:", e)
         return []
+
+def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
+    try:
+        headers = {
+            "Authorization": "Bearer " + RESEND_KEY,
+            "Content-Type": "application/json"
+        }
+        html = (
+            "<h2>💸 Fiyat Dustu!</h2>"
+            "<p><b>" + (urun_adi or "Urun") + "</b> fiyati degisti!</p>"
+            "<p>Eski fiyat: <s>" + str(eski_fiyat) + "</s></p>"
+            "<p>Yeni fiyat: <b style='color:green'>" + str(yeni_fiyat) + "</b></p>"
+            "<a href='" + url + "' style='background:#534AB7;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Urune Git</a>"
+        )
+        data = {
+            "from": "bildirim@rafta.net",
+            "to": email,
+            "subject": "Fiyat dustu: " + (urun_adi or "Urun"),
+            "html": html
+        }
+        status = http_post("https://api.resend.com/emails", headers, data)
+        print("Email durumu:", status)
+    except Exception as e:
+        print("Email hatasi (devam ediliyor):", e)
 
 def push_gonder(email, title, body, url):
     if not WEBPUSH_AVAILABLE:
+        print("pywebpush yuklu degil")
         return
+    print("Push deneniyor:", email)
     subscriptions = push_subscriptions_getir(email)
+    print("Subscription sayisi:", len(subscriptions))
+    if not subscriptions:
+        print("Push subscription bulunamadi:", email)
+        return
     for sub in subscriptions:
         try:
             webpush(
@@ -229,32 +252,10 @@ def push_gonder(email, title, body, url):
             )
             print("Push gonderildi:", email)
         except WebPushException as e:
-            print("Push hatasi:", e)
+            print("Push WebPush hatasi:", repr(e))
         except Exception as e:
-            print("Push hatasi:", e)
+            print("Push genel hatasi:", repr(e))
 
-def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
-    headers = {
-        "Authorization": "Bearer " + RESEND_KEY,
-        "Content-Type": "application/json"
-    }
-    html = (
-        "<h2>💸 Fiyat Dustu!</h2>"
-        "<p><b>" + (urun_adi or "Urun") + "</b> fiyati degisti!</p>"
-        "<p>Eski fiyat: <s>" + str(eski_fiyat) + "</s></p>"
-        "<p>Yeni fiyat: <b style='color:green'>" + str(yeni_fiyat) + "</b></p>"
-        "<a href='" + url + "' style='background:#534AB7;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Urune Git</a>"
-    )
-    data = {
-        "from": "bildirim@rafta.net",
-        "to": email,
-        "subject": "Fiyat dustu: " + (urun_adi or "Urun"),
-        "html": html
-    }
-    status = http_post("https://api.resend.com/emails", headers, data)
-    print("Email durumu:", status)
-
-# ── ANA KONTROL FONKSİYONU ────────────────────────────────────
 def kontrol_et(urun):
     urun_id = urun["id"]
     url = urun["url"]
@@ -272,7 +273,6 @@ def kontrol_et(urun):
     else:
         yeni_fiyat, yeni_adi = genel_fiyat_ve_adi(url)
 
-    # Siteden gelen isim varsa her zaman güncelle
     if yeni_adi:
         urun_adi = yeni_adi
 
@@ -310,11 +310,9 @@ def kontrol_et(urun):
         except Exception as e:
             print("Hedef fiyat kontrolu hatasi:", e)
 
-# ── CALISTIR ──────────────────────────────────────────────────
 urunler = urunleri_getir()
 print(f"{len(urunler)} urun bulundu.")
 
-# Once guncelleme istegi olan urunleri isle
 istekli = [u for u in urunler if u.get("guncelleme_istegi")]
 diger   = [u for u in urunler if not u.get("guncelleme_istegi")]
 
@@ -324,7 +322,6 @@ if istekli:
 for urun in istekli + diger:
     try:
         kontrol_et(urun)
-        # Guncelleme istegini sifirla
         if urun.get("guncelleme_istegi"):
             headers = {
                 "apikey": SUPABASE_KEY,
