@@ -60,57 +60,7 @@ def scraper_get(target_url, render_js=True):
         return r.read().decode("utf-8")
 
 def trendyol_fiyat_ve_adi(url):
-    try:
-        import re
-        m = re.search(r'-p-(\d+)', url)
-        if not m:
-            print("Trendyol ürün ID bulunamadı:", url)
-            return trendyol_playwright(url)
-        urun_id = m.group(1)
-        
-        # Boutique ve merchant ID'lerini al
-        boutique_id = re.search(r'boutiqueId=(\d+)', url)
-        merchant_id = re.search(r'merchantId=(\d+)', url)
-        
-        api_url = f"https://public.trendyol.com/discovery-web-productgw-service/api/render-page/get-product-detail-page?contentId={urun_id}&storefrontId=1&culture=tr-TR&currencyCode=TRY&os=2"
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
-            "Accept": "application/json",
-            "Accept-Language": "tr-TR,tr;q=0.9",
-            "Origin": "https://www.trendyol.com",
-            "Referer": "https://www.trendyol.com/",
-        }
-        
-        req = urllib.request.Request(api_url, headers=headers)
-        with urllib.request.urlopen(req, timeout=15) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        
-        fiyat = None
-        urun_adi = None
-        
-        try:
-            product = data['result']['product']
-            price = product.get('price', {})
-            discounted = price.get('discountedPrice', {}).get('value')
-            original = price.get('originalPrice', {}).get('value')
-            val = discounted or original
-            if val:
-                fiyat = f"{float(val):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-            urun_adi = product.get('name', '')
-            print("Trendyol API başarılı:", fiyat, urun_adi)
-        except Exception as e:
-            print("Trendyol API parse hatası:", e)
-        
-        if not fiyat:
-            return trendyol_playwright(url)
-        
-        return fiyat, urun_adi
-        
-    except Exception as e:
-        print("Trendyol API hatası:", e)
-        return trendyol_playwright(url)
-
+    return trendyol_playwright(url)
 
 def trendyol_playwright(url):
     try:
@@ -134,6 +84,7 @@ def trendyol_playwright(url):
                         text = el.inner_text().strip()
                         if text and any(c.isdigit() for c in text):
                             fiyat = text
+                            print("Fiyat bulundu:", fiyat)
                             break
                 except:
                     pass
@@ -148,6 +99,7 @@ def trendyol_playwright(url):
                         val = float(m.group(1))
                         if val > 1:
                             fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+                            print("Fiyat JSON'dan bulundu:", fiyat)
                 except:
                     pass
 
@@ -163,7 +115,7 @@ def trendyol_playwright(url):
             browser.close()
             return fiyat, urun_adi
     except Exception as e:
-        print("Trendyol Playwright hatası:", e)
+        print("Trendyol Playwright hatasi:", e)
         return None, None
 
 def genel_fiyat_ve_adi(url):
@@ -290,7 +242,7 @@ def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
             "<p><b>" + (urun_adi or "Urun") + "</b> fiyati degisti!</p>"
             "<p>Eski fiyat: <s>" + str(eski_fiyat) + "</s></p>"
             "<p>Yeni fiyat: <b style='color:green'>" + str(yeni_fiyat) + "</b></p>"
-            "<a href='" + url + "' style='background:#534AB7;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Urune Git</a>"
+            "<a href='" + url + "' style='background:#111;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Urune Git</a>"
         )
         data = {
             "from": "bildirim@rafta.net",
@@ -339,7 +291,7 @@ def kontrol_et(urun):
     yeni_fiyat = None
     yeni_adi = None
 
-    if "trendyol.com" in url:
+    if "trendyol.com" in url or "ty.gl" in url:
         yeni_fiyat, yeni_adi = trendyol_fiyat_ve_adi(url)
     else:
         yeni_fiyat, yeni_adi = genel_fiyat_ve_adi(url)
@@ -366,7 +318,7 @@ def kontrol_et(urun):
         if bildirim_dusus:
             print("Her dusus bildirimi aktif, bildirim gonderiliyor...")
             email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
-            push_gonder(email, "Fiyat dustu! 📉", f"{urun_adi or 'Urun'}: {yeni_fiyat}", url)
+            push_gonder(email, "Fiyat dustu!", f"{urun_adi or 'Urun'}: {yeni_fiyat}", url)
     else:
         print("Fiyat degismedi.")
 
@@ -377,7 +329,7 @@ def kontrol_et(urun):
             if yeni_sayi <= float(hedef_fiyat):
                 print("Hedef fiyata ulasildi! Bildirim gonderiliyor...")
                 email_gonder(email, urun_adi, eski_fiyat or "-", yeni_fiyat + " (HEDEF FIYATA ULASILDI!)", url)
-                push_gonder(email, "Hedefe ulasti! 🎯", f"{urun_adi or 'Urun'} hedef fiyata ulasti: {yeni_fiyat}", url)
+                push_gonder(email, "Hedefe ulasti!", f"{urun_adi or 'Urun'} hedef fiyata ulasti: {yeni_fiyat}", url)
         except Exception as e:
             print("Hedef fiyat kontrolu hatasi:", e)
 
