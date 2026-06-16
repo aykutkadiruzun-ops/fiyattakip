@@ -87,6 +87,12 @@ def trendyol_playwright(url):
             mobile_url = url.replace("www.trendyol.com", "m.trendyol.com")
             page.goto(mobile_url, wait_until="networkidle", timeout=60000)
             time.sleep(15)
+            try:
+                content = page.content()
+                print("Sayfa uzunlugu:", len(content))
+                print("Sayfa icerigi (ilk 500):", content[:500])
+            except:
+                pass
 
             fiyat = None
             for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container", ".price-container", ".pr-bx-nm"]:
