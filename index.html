@@ -401,17 +401,27 @@
     /* ── MODAL ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-      z-index: 200; display: none; align-items: flex-end; justify-content: center;
+      z-index: 1000; display: none; align-items: flex-end; justify-content: center;
+      padding-bottom: env(safe-area-inset-bottom);
     }
     .modal-overlay.open { display: flex; }
 
     .modal {
       background: var(--bg); border-radius: 20px 20px 0 0;
       padding: 10px 22px 48px; width: 100%; max-width: 580px;
-      border-top: 0.5px solid var(--border);
+      border-top: 0.5px solid var(--border); position: relative;
+      box-shadow: 0 -16px 40px rgba(0,0,0,.12);
     }
 
     .modal-handle { width: 32px; height: 4px; background: var(--border); border-radius: 99px; margin: 12px auto 20px; }
+    .modal-close {
+      position: absolute; top: 12px; right: 16px;
+      width: 32px; height: 32px; border-radius: 9px;
+      border: 0.5px solid var(--border); background: var(--surface);
+      color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); border-color: var(--text); }
 
     .modal h3 {
       font-family: var(--serif);
@@ -611,8 +621,8 @@
     .col-name { font-family: var(--serif); font-size: 17px; color: var(--text); letter-spacing: -0.2px; }
     .col-count { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .col-preview { display: flex; gap: 6px; margin-bottom: 10px; }
-    .col-preview-item { flex: 1; min-width: 0; background: var(--bg); border-radius: 8px; border: 0.5px solid var(--border); padding: 7px 9px; overflow: hidden; }
-    .col-preview-name { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; max-width: 100%; }
+    .col-preview-item { flex: 1; background: var(--bg); border-radius: 8px; border: 0.5px solid var(--border); padding: 7px 9px; }
+    .col-preview-name { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
     .col-preview-price { font-family: var(--serif); font-size: 12px; color: var(--text); }
     .col-preview-price.down { color: var(--success); }
     .col-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 0.5px solid var(--border2); }
@@ -896,7 +906,7 @@
   <div class="page" id="page-collections">
     <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
       <div class="page-title">Koleksiyonlar</div>
-      <button class="icon-btn" onclick="openNewCollectionModal()" aria-label="yeni koleksiyon" style="background:var(--text);color:var(--bg);border-color:var(--text)">
+      <button class="icon-btn" onclick="openNewCollectionModal()" aria-label="Yeni koleksiyon oluştur" style="background:var(--text);color:var(--bg);border-color:var(--text)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
     </div>
@@ -941,7 +951,7 @@
       <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
       <span class="nav-label">Ürünler</span>
     </button>
-    <button class="nav-btn center-btn" onclick="openModal()">
+    <button class="nav-btn center-btn" onclick="openModal()" aria-label="Ürün ekle">
       <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
     <button class="nav-btn" id="nav-notifications" onclick="goPage('notifications')">
@@ -961,9 +971,10 @@
 
 <!-- MODAL: ÜRÜN EKLE -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-product-title">
+    <button class="modal-close" type="button" onclick="closeModal()" aria-label="Ürün ekleme penceresini kapat">×</button>
     <div class="modal-handle"></div>
-    <h3>Ürün takibe al</h3>
+    <h3 id="add-product-title">Ürün takibe al</h3>
     <div class="field"><label>Ürün linki</label><input type="url" id="new-url" placeholder="Trendyol, Bershka, Zara, H&M…" /></div>
     <div class="field"><label>Hedef fiyat (₺)</label><input type="number" id="new-target" placeholder="örn. 450" min="0" step="0.01" /></div>
     <div class="field">
@@ -988,11 +999,26 @@
   </div>
 </div>
 
+<!-- MODAL: YENİ KOLEKSİYON -->
+<div class="modal-overlay" id="new-collection-overlay" onclick="closeNewCollectionOutside(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="new-collection-title" style="padding-bottom:36px">
+    <button class="modal-close" type="button" onclick="closeNewCollectionModal()" aria-label="Yeni koleksiyon penceresini kapat">×</button>
+    <div class="modal-handle"></div>
+    <h3 id="new-collection-title" style="margin-bottom:16px">Yeni koleksiyon</h3>
+    <div class="field">
+      <label>Koleksiyon adı</label>
+      <input type="text" id="new-collection-name" placeholder="örn. Yaz koleksiyonu" onkeydown="if(event.key==='Enter')createNewCollection()" />
+    </div>
+    <button class="btn-primary" type="button" onclick="createNewCollection()" style="background:var(--text);color:var(--bg)">Koleksiyon oluştur</button>
+  </div>
+</div>
+
 <!-- MODAL: KOLEKSİYON SEÇİCİ -->
 <div class="modal-overlay" id="collection-picker-overlay" onclick="closeCollectionPicker(event)">
-  <div class="modal" style="padding-bottom:36px">
+  <div class="modal" style="padding-bottom:36px" role="dialog" aria-modal="true" aria-labelledby="collection-picker-title">
+    <button class="modal-close" type="button" onclick="document.getElementById('collection-picker-overlay').classList.remove('open')" aria-label="Koleksiyon seçiciyi kapat">×</button>
     <div class="modal-handle"></div>
-    <h3 style="margin-bottom:16px">Koleksiyona ekle</h3>
+    <h3 id="collection-picker-title" style="margin-bottom:16px">Koleksiyona ekle</h3>
     <div class="field">
       <label>Koleksiyon adı</label>
       <input type="text" id="picker-koleksiyon-input" placeholder="Mevcut seç veya yeni yaz…" list="picker-koleksiyon-list" />
@@ -1005,9 +1031,10 @@
 
 <!-- MODAL: KOLEKSİYON PAYLAŞ -->
 <div class="modal-overlay" id="share-collection-overlay" onclick="if(event.target.id==='share-collection-overlay')document.getElementById('share-collection-overlay').classList.remove('open')">
-  <div class="modal" style="padding-bottom:36px">
+  <div class="modal" style="padding-bottom:36px" role="dialog" aria-modal="true" aria-labelledby="share-collection-title">
+    <button class="modal-close" type="button" onclick="document.getElementById('share-collection-overlay').classList.remove('open')" aria-label="Paylaşım penceresini kapat">×</button>
     <div class="modal-handle"></div>
-    <h3 style="margin-bottom:8px">Koleksiyonu paylaş</h3>
+    <h3 id="share-collection-title" style="margin-bottom:8px">Koleksiyonu paylaş</h3>
     <p style="font-size:12px;color:var(--muted);margin-bottom:18px">Bu linki paylaşarak koleksiyonunu başkalarına gösterebilirsin.</p>
     <div style="display:flex;gap:8px;align-items:center">
       <input type="text" id="share-link-input" readonly style="flex:1;padding:10px 12px;border:0.5px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:12px;color:var(--muted);background:var(--bg)" />
@@ -1018,18 +1045,20 @@
 
 <!-- MODAL: KOLEKSIYONA EKLE -->
 <div class="modal-overlay" id="add-to-collection-overlay" onclick="if(event.target.id==='add-to-collection-overlay')document.getElementById('add-to-collection-overlay').classList.remove('open')">
-  <div class="modal" style="padding-bottom:36px;max-height:80vh;overflow-y:auto">
+  <div class="modal" style="padding-bottom:36px;max-height:80vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="add-to-collection-title">
+    <button class="modal-close" type="button" onclick="document.getElementById('add-to-collection-overlay').classList.remove('open')" aria-label="Koleksiyona ürün ekleme penceresini kapat">×</button>
     <div class="modal-handle"></div>
-    <h3 style="margin-bottom:16px">Koleksiyona ürün ekle</h3>
+    <h3 id="add-to-collection-title" style="margin-bottom:16px">Koleksiyona ürün ekle</h3>
     <div id="add-to-collection-list"></div>
   </div>
 </div>
 
 <!-- MODAL: BİLDİRİM AYARLARI -->
 <div class="modal-overlay" id="notif-settings-overlay" onclick="if(event.target.id==='notif-settings-overlay')document.getElementById('notif-settings-overlay').classList.remove('open')">
-  <div class="modal" style="padding-bottom:36px">
+  <div class="modal" style="padding-bottom:36px" role="dialog" aria-modal="true" aria-labelledby="notif-settings-title">
+    <button class="modal-close" type="button" onclick="document.getElementById('notif-settings-overlay').classList.remove('open')" aria-label="Bildirim ayarlarını kapat">×</button>
     <div class="modal-handle"></div>
-    <h3 style="margin-bottom:18px">Bildirim ayarları</h3>
+    <h3 id="notif-settings-title" style="margin-bottom:18px">Bildirim ayarları</h3>
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:22px">
       <label style="display:flex;align-items:center;gap:12px;cursor:pointer;font-size:14px;font-weight:400;color:var(--text)">
         <input type="checkbox" id="notif-settings-hedef" style="width:18px;height:18px;accent-color:var(--text)" />
@@ -1046,7 +1075,8 @@
 
 <!-- MODAL: FİYAT GEÇMİŞİ -->
 <div class="modal-overlay" id="chart-overlay" onclick="closeChartOutside(event)">
-  <div class="modal" style="padding-bottom:32px">
+  <div class="modal" style="padding-bottom:32px" role="dialog" aria-modal="true" aria-labelledby="chart-title">
+    <button class="modal-close" type="button" onclick="closeChart()" aria-label="Fiyat geçmişini kapat">×</button>
     <div class="modal-handle"></div>
     <h3 id="chart-title" style="margin-bottom:4px">Fiyat geçmişi</h3>
     <p id="chart-sub" style="font-size:11px;color:var(--muted);margin-bottom:18px"></p>
@@ -1076,10 +1106,17 @@ const today = new Date();
 document.getElementById('home-date').textContent = today.toLocaleDateString('tr-TR', {weekday:'long', day:'numeric', month:'long'});
 
 // Helpers
+window.hideToast = () => {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  clearTimeout(t._t);
+  t.className = '';
+};
+
 window.showToast = (msg, type='') => {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'show ' + type;
-  clearTimeout(t._t); t._t = setTimeout(() => t.className='', 3000);
+  clearTimeout(t._t); t._t = setTimeout(() => t.className='', 2500);
 };
 
 const parsePrice = n => {
@@ -1310,6 +1347,8 @@ sb.auth.onAuthStateChange((_e, session) => {
 
 // Page nav
 window.goPage = name => {
+  hideToast();
+  document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn:not(.center-btn)').forEach(b => b.classList.remove('active'));
   document.getElementById('page-'+name)?.classList.add('active');
@@ -1322,7 +1361,11 @@ window.goPage = name => {
 };
 
 // Modal
-window.openModal  = () => document.getElementById('modal-overlay').classList.add('open');
+window.openModal  = () => {
+  hideToast();
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('new-url')?.focus(), 150);
+};
 window.closeModal = () => document.getElementById('modal-overlay').classList.remove('open');
 window.closeModalOutside = e => { if(e.target.id==='modal-overlay') closeModal(); };
 
@@ -1449,13 +1492,13 @@ function cardHTML(p) {
         <button class="btn-sm shelf-btn ${p.satin_alindi?'done':''}" onclick="toggleShelf(${p.id},${!!p.satin_alindi})">
           ${p.satin_alindi ? '✓ Rafımda' : 'Rafıma al'}
         </button>
-        <button class="btn-icon" onclick="showHistory(${p.id},'${(p.urun_adi||'Ürün').replace(/'/g,'')}')">
+        <button class="btn-icon" aria-label="Fiyat geçmişini göster" onclick="showHistory(${p.id},'${(p.urun_adi||'Ürün').replace(/'/g,'')}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </button>
-        <button class="btn-icon del" onclick="deleteProduct(${p.id})">
+        <button class="btn-icon del" aria-label="Ürünü sil" onclick="deleteProduct(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
-        <button class="btn-icon" onclick="toggleMoreMenu(${p.id})">
+        <button class="btn-icon" aria-label="Ürün seçenekleri" onclick="toggleMoreMenu(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
       </div>
@@ -1552,7 +1595,7 @@ function shelfCardHTML(p) {
       ${saving ? `<div class="pc-chips">${saving}</div>` : '<div></div>'}
       <div class="pc-actions">
         <button class="btn-sm shelf-btn done" onclick="toggleShelf(${p.id}, true); goPage('shelf')">✓ Rafımda</button>
-        <button class="btn-icon del" onclick="deleteFromShelf(${p.id})">
+        <button class="btn-icon del" aria-label="Rafımdan sil" onclick="deleteFromShelf(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
       </div>
@@ -1570,11 +1613,35 @@ window.deleteFromShelf = async id => {
 };
 
 // Add product
+function validateProductUrl(rawUrl) {
+  if (!rawUrl) return { ok:false, message:'Link gerekli.' };
+  let parsed;
+  try { parsed = new URL(rawUrl); }
+  catch(e) { return { ok:false, message:'Geçerli bir link gir.' }; }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { ok:false, message:'Geçerli bir link gir.' };
+  }
+  const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+  const path = parsed.pathname.replace(/\/+$/, '');
+  if (!path || path === '/') {
+    return { ok:false, message:'Ana sayfa değil, ürün sayfası linki gir.' };
+  }
+  if (host.includes('trendyol.com') && !(/-p-\d+/i.test(path) || /\/p\//i.test(path))) {
+    return { ok:false, message:'Trendyol için ürün detay linki gir.' };
+  }
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length < 1 || /^(c|sr|magaza|brand|kategori|arama|search|sepet|login|account)$/i.test(segments[0])) {
+    return { ok:false, message:'Ürün sayfası linki gir.' };
+  }
+  return { ok:true, url: parsed.href };
+}
+
 window.addProduct = async () => {
-  const url    = document.getElementById('new-url').value.trim();
+  const rawUrl = document.getElementById('new-url').value.trim();
   const target = document.getElementById('new-target').value.trim();
-  if (!url) { showToast('Link gerekli.','error'); return; }
-  if (!url.startsWith('http')) { showToast('Geçerli bir link gir.','error'); return; }
+  const validation = validateProductUrl(rawUrl);
+  if (!validation.ok) { showToast(validation.message,'error'); return; }
+  const url = validation.url;
   const btn = document.getElementById('btn-add');
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
   const koleksiyon = document.getElementById('new-koleksiyon').value.trim();
@@ -1736,10 +1803,28 @@ window.addToCollection = async id => {
 };
 
 window.openNewCollectionModal = () => {
-  const isim = prompt('Koleksiyon adı:');
-  if (!isim || !isim.trim()) return;
-  showToast(`"${isim.trim()}" koleksiyonu oluşturuldu!`, 'success');
-  openCollection(isim.trim());
+  hideToast();
+  const input = document.getElementById('new-collection-name');
+  if (input) input.value = '';
+  document.getElementById('new-collection-overlay').classList.add('open');
+  setTimeout(() => input?.focus(), 150);
+};
+
+window.closeNewCollectionModal = () => {
+  document.getElementById('new-collection-overlay').classList.remove('open');
+};
+
+window.closeNewCollectionOutside = e => {
+  if (e.target.id === 'new-collection-overlay') closeNewCollectionModal();
+};
+
+window.createNewCollection = () => {
+  const input = document.getElementById('new-collection-name');
+  const isim = input.value.trim();
+  if (!isim) { showToast('Koleksiyon adı gerekli.', 'error'); input.focus(); return; }
+  closeNewCollectionModal();
+  openCollection(isim);
+  showToast(`"${isim}" koleksiyonu oluşturuldu!`, 'success');
 };
 
 // Collection picker
