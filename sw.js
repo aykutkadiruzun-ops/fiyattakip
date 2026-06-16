@@ -14,7 +14,12 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('push', function(event) {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch(e) {
+    data = { title: 'Rafta', body: event.data ? event.data.text() : 'Fiyat değişikliği var!' };
+  }
   const title = data.title || 'Rafta';
   const options = {
     body: data.body || 'Fiyat değişikliği var!',
