@@ -107,18 +107,26 @@ def trendyol_playwright(url):
                     pass
 
             if not fiyat:
-                try:
-                    content = page.content()
-                    m = re.search(r'"discountedPrice"\s*:\s*([\d.]+)', content)
-                    if not m:
-                        m = re.search(r'"price"\s*:\s*([\d.]+)', content)
-                    if m:
-                        val = float(m.group(1))
-                        if val > 1:
-                            fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-                            print("Fiyat JSON'dan bulundu:", fiyat)
-                except:
-                    pass
+    try:
+        content = page.content()
+        patterns = [
+            r'"discountedPrice"\s*:\s*([\d.]+)',
+            r'"sellingPrice"\s*:\s*([\d.]+)',
+            r'"listPrice"\s*:\s*([\d.]+)',
+            r'"originalPrice"\s*:\s*([\d.]+)',
+            r'"price"\s*:\s*([\d.]+)',
+            r'\"price\":\"([\d.,]+)\"',
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, content)
+            if m:
+                val = float(m.group(1).replace(',', '.'))
+                if val > 1:
+                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+                    print(f"Fiyat JSON'dan bulundu ({pattern}):", fiyat)
+                    break
+    except Exception as e:
+        print("JSON parse hatasi:", e)
 
             urun_adi = None
             try:
