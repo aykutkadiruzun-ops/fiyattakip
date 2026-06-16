@@ -67,14 +67,17 @@ def trendyol_playwright(url):
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 800},
-                locale="tr-TR",
-                timezone_id="Europe/Istanbul",
-            )
-            page = context.new_page()
-            page.goto(url, wait_until="networkidle", timeout=60000)
-            time.sleep(15)
+    user_agent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
+    viewport={"width": 390, "height": 844},
+    locale="tr-TR",
+    timezone_id="Europe/Istanbul",
+    is_mobile=True,
+    has_touch=True,
+)
+page = context.new_page()
+mobile_url = url.replace("www.trendyol.com", "m.trendyol.com")
+page.goto(mobile_url, wait_until="networkidle", timeout=60000)
+time.sleep(15)
 
             fiyat = None
             for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container"]:
