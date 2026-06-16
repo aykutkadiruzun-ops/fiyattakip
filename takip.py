@@ -75,6 +75,15 @@ def trendyol_playwright(url):
                 has_touch=True,
             )
             page = context.new_page()
+            # ty.gl kısa linkini çöz
+            if "ty.gl" in url:
+                try:
+                    req = urllib.request.Request(url, method='HEAD')
+                    with urllib.request.urlopen(req) as r:
+                        url = r.url
+                    print("Redirect sonrası URL:", url)
+                except Exception as e:
+                    print("Redirect hatasi:", e)
             mobile_url = url.replace("www.trendyol.com", "m.trendyol.com")
             page.goto(mobile_url, wait_until="networkidle", timeout=60000)
             time.sleep(15)
