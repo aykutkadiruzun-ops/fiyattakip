@@ -67,20 +67,20 @@ def trendyol_playwright(url):
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-    user_agent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
-    viewport={"width": 390, "height": 844},
-    locale="tr-TR",
-    timezone_id="Europe/Istanbul",
-    is_mobile=True,
-    has_touch=True,
-)
-page = context.new_page()
-mobile_url = url.replace("www.trendyol.com", "m.trendyol.com")
-page.goto(mobile_url, wait_until="networkidle", timeout=60000)
-time.sleep(15)
+                user_agent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
+                viewport={"width": 390, "height": 844},
+                locale="tr-TR",
+                timezone_id="Europe/Istanbul",
+                is_mobile=True,
+                has_touch=True,
+            )
+            page = context.new_page()
+            mobile_url = url.replace("www.trendyol.com", "m.trendyol.com")
+            page.goto(mobile_url, wait_until="networkidle", timeout=60000)
+            time.sleep(15)
 
             fiyat = None
-            for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container"]:
+            for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container", ".price-container", ".pr-bx-nm"]:
                 try:
                     el = page.locator(sel).first
                     if el.count() > 0:
@@ -108,12 +108,9 @@ time.sleep(15)
 
             urun_adi = None
             try:
-                urun_adi = page.locator("h1.pr-new-br span").first.inner_text().strip()
+                urun_adi = page.locator("h1").first.inner_text().strip()
             except:
-                try:
-                    urun_adi = page.locator("h1").first.inner_text().strip()
-                except:
-                    pass
+                pass
 
             browser.close()
             return fiyat, urun_adi
@@ -241,7 +238,7 @@ def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
             "Content-Type": "application/json"
         }
         html = (
-            "<h2>💸 Fiyat Dustu!</h2>"
+            "<h2>Fiyat Dustu!</h2>"
             "<p><b>" + (urun_adi or "Urun") + "</b> fiyati degisti!</p>"
             "<p>Eski fiyat: <s>" + str(eski_fiyat) + "</s></p>"
             "<p>Yeni fiyat: <b style='color:green'>" + str(yeni_fiyat) + "</b></p>"
