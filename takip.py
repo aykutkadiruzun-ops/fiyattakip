@@ -84,9 +84,8 @@ def trendyol_playwright(url):
                     print("Redirect sonrası URL:", url)
                 except Exception as e:
                     print("Redirect hatasi:", e)
-            mobile_url = url.replace("www.trendyol.com", "m.trendyol.com")
-            page.goto(mobile_url, wait_until="networkidle", timeout=60000)
-            time.sleep(15)
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(20)
             try:
                 content = page.content()
                 print("Sayfa uzunlugu:", len(content))
