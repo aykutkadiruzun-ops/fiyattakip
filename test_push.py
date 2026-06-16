@@ -6,7 +6,7 @@ import urllib.parse
 
 SUPABASE_URL = "https://uwxfrbljvmwtxecnqgrl.supabase.co"
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "aDUEzHzPJ5-w1LuFElyE-tGuaQhD-0PD4Rydv5fZlfY")
+VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "dkt52zrQhGw_LKL-tcGCOzUoogHjReokrNWdTbY1k70")
 VAPID_EMAIL = "mailto:bildirim@rafta.net"
 TEST_EMAIL = "aykutkadiruzun@gmail.com"
 
