@@ -74,7 +74,7 @@ def trendyol_playwright(url):
             )
             page = context.new_page()
             page.goto(url, wait_until="networkidle", timeout=60000)
-time.sleep(15)
+            time.sleep(15)
 
             fiyat = None
             for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container"]:
