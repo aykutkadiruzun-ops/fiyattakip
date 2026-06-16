@@ -64,19 +64,69 @@ def trendyol_fiyat_ve_adi(url):
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 800},
+                locale="tr-TR",
+                timezone_id="Europe/Istanbul",
+                extra_http_headers={
+                    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                    "Sec-CH-UA": '"Chromium";v="124", "Google Chrome";v="124"',
+                    "Sec-CH-UA-Mobile": "?0",
+                    "Sec-CH-UA-Platform": '"Windows"',
+                }
             )
+            try:
+                from playwright_stealth import stealth_sync
+                stealth_sync(context.new_page().__class__)
+            except:
+                pass
+
             page = context.new_page()
+
+            try:
+                from playwright_stealth import stealth_sync
+                stealth_sync(page)
+            except:
+                pass
+
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            time.sleep(8)
+            time.sleep(10)
 
             fiyat = None
-            for sel in [".new-price", ".prc-box-dscntd", ".product-price-container"]:
+            selectors = [
+                ".prc-box-dscntd",
+                ".prc-box-sllng",
+                ".new-price",
+                ".product-price-container",
+                "[data-testid='price-current-price']",
+                ".pr-bx-pr-cntr",
+                ".prc-dsc",
+            ]
+            for sel in selectors:
                 try:
                     el = page.locator(sel).first
                     if el.count() > 0:
-                        fiyat = el.inner_text().strip()
-                        break
+                        text = el.inner_text().strip()
+                        if text and any(c.isdigit() for c in text):
+                            fiyat = text
+                            print(f"Fiyat bulundu ({sel}):", fiyat)
+                            break
+                except:
+                    pass
+
+            if not fiyat:
+                try:
+                    content = page.content()
+                    import re
+                    m = re.search(r'"discountedPrice"\s*:\s*([\d.]+)', content)
+                    if not m:
+                        m = re.search(r'"price"\s*:\s*([\d.]+)', content)
+                    if m:
+                        val = float(m.group(1))
+                        if val > 1:
+                            fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+                            print("Fiyat JSON'dan bulundu:", fiyat)
                 except:
                     pass
 
