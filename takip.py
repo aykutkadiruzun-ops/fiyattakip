@@ -75,26 +75,19 @@ def trendyol_playwright(url):
                 has_touch=True,
             )
             page = context.new_page()
-            # ty.gl kısa linkini çöz
             if "ty.gl" in url:
                 try:
                     req = urllib.request.Request(url, method='HEAD')
                     with urllib.request.urlopen(req) as r:
                         url = r.url
-                    print("Redirect sonrası URL:", url)
+                    print("Redirect sonrasi URL:", url)
                 except Exception as e:
                     print("Redirect hatasi:", e)
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
             time.sleep(20)
-            try:
-                content = page.content()
-                print("Sayfa uzunlugu:", len(content))
-                print("Sayfa icerigi (ilk 500):", content[:500])
-            except:
-                pass
 
             fiyat = None
-            for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container", ".price-container", ".pr-bx-nm"]:
+            for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container", ".price-container"]:
                 try:
                     el = page.locator(sel).first
                     if el.count() > 0:
@@ -107,26 +100,26 @@ def trendyol_playwright(url):
                     pass
 
             if not fiyat:
-    try:
-        content = page.content()
-        patterns = [
-            r'"discountedPrice"\s*:\s*([\d.]+)',
-            r'"sellingPrice"\s*:\s*([\d.]+)',
-            r'"listPrice"\s*:\s*([\d.]+)',
-            r'"originalPrice"\s*:\s*([\d.]+)',
-            r'"price"\s*:\s*([\d.]+)',
-            r'\"price\":\"([\d.,]+)\"',
-        ]
-        for pattern in patterns:
-            m = re.search(pattern, content)
-            if m:
-                val = float(m.group(1).replace(',', '.'))
-                if val > 1:
-                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-                    print(f"Fiyat JSON'dan bulundu ({pattern}):", fiyat)
-                    break
-    except Exception as e:
-        print("JSON parse hatasi:", e)
+                try:
+                    content = page.content()
+                    print("Sayfa uzunlugu:", len(content))
+                    patterns = [
+                        r'"discountedPrice"\s*:\s*([\d.]+)',
+                        r'"sellingPrice"\s*:\s*([\d.]+)',
+                        r'"listPrice"\s*:\s*([\d.]+)',
+                        r'"originalPrice"\s*:\s*([\d.]+)',
+                        r'"price"\s*:\s*([\d.]+)',
+                    ]
+                    for pattern in patterns:
+                        m = re.search(pattern, content)
+                        if m:
+                            val = float(m.group(1).replace(',', '.'))
+                            if val > 1:
+                                fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+                                print("Fiyat JSON'dan bulundu:", fiyat)
+                                break
+                except Exception as e:
+                    print("JSON parse hatasi:", e)
 
             urun_adi = None
             try:
