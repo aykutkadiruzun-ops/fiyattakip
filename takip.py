@@ -61,6 +61,59 @@ def scraper_get(target_url, render_js=True):
 
 def trendyol_fiyat_ve_adi(url):
     try:
+        import re
+        m = re.search(r'-p-(\d+)', url)
+        if not m:
+            print("Trendyol ürün ID bulunamadı:", url)
+            return trendyol_playwright(url)
+        urun_id = m.group(1)
+        
+        # Boutique ve merchant ID'lerini al
+        boutique_id = re.search(r'boutiqueId=(\d+)', url)
+        merchant_id = re.search(r'merchantId=(\d+)', url)
+        
+        api_url = f"https://public.trendyol.com/discovery-web-productgw-service/api/render-page/get-product-detail-page?contentId={urun_id}&storefrontId=1&culture=tr-TR&currencyCode=TRY&os=2"
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+            "Accept": "application/json",
+            "Accept-Language": "tr-TR,tr;q=0.9",
+            "Origin": "https://www.trendyol.com",
+            "Referer": "https://www.trendyol.com/",
+        }
+        
+        req = urllib.request.Request(api_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        
+        fiyat = None
+        urun_adi = None
+        
+        try:
+            product = data['result']['product']
+            price = product.get('price', {})
+            discounted = price.get('discountedPrice', {}).get('value')
+            original = price.get('originalPrice', {}).get('value')
+            val = discounted or original
+            if val:
+                fiyat = f"{float(val):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+            urun_adi = product.get('name', '')
+            print("Trendyol API başarılı:", fiyat, urun_adi)
+        except Exception as e:
+            print("Trendyol API parse hatası:", e)
+        
+        if not fiyat:
+            return trendyol_playwright(url)
+        
+        return fiyat, urun_adi
+        
+    except Exception as e:
+        print("Trendyol API hatası:", e)
+        return trendyol_playwright(url)
+
+
+def trendyol_playwright(url):
+    try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -68,49 +121,19 @@ def trendyol_fiyat_ve_adi(url):
                 viewport={"width": 1280, "height": 800},
                 locale="tr-TR",
                 timezone_id="Europe/Istanbul",
-                extra_http_headers={
-                    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                    "Sec-CH-UA": '"Chromium";v="124", "Google Chrome";v="124"',
-                    "Sec-CH-UA-Mobile": "?0",
-                    "Sec-CH-UA-Platform": '"Windows"',
-                }
             )
-            try:
-                from playwright_stealth import stealth_sync
-                stealth_sync(context.new_page().__class__)
-            except:
-                pass
-
             page = context.new_page()
-
-            try:
-                from playwright_stealth import stealth_sync
-                stealth_sync(page)
-            except:
-                pass
-
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
             time.sleep(10)
 
             fiyat = None
-            selectors = [
-                ".prc-box-dscntd",
-                ".prc-box-sllng",
-                ".new-price",
-                ".product-price-container",
-                "[data-testid='price-current-price']",
-                ".pr-bx-pr-cntr",
-                ".prc-dsc",
-            ]
-            for sel in selectors:
+            for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container"]:
                 try:
                     el = page.locator(sel).first
                     if el.count() > 0:
                         text = el.inner_text().strip()
                         if text and any(c.isdigit() for c in text):
                             fiyat = text
-                            print(f"Fiyat bulundu ({sel}):", fiyat)
                             break
                 except:
                     pass
@@ -118,7 +141,6 @@ def trendyol_fiyat_ve_adi(url):
             if not fiyat:
                 try:
                     content = page.content()
-                    import re
                     m = re.search(r'"discountedPrice"\s*:\s*([\d.]+)', content)
                     if not m:
                         m = re.search(r'"price"\s*:\s*([\d.]+)', content)
@@ -126,7 +148,6 @@ def trendyol_fiyat_ve_adi(url):
                         val = float(m.group(1))
                         if val > 1:
                             fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-                            print("Fiyat JSON'dan bulundu:", fiyat)
                 except:
                     pass
 
@@ -142,7 +163,7 @@ def trendyol_fiyat_ve_adi(url):
             browser.close()
             return fiyat, urun_adi
     except Exception as e:
-        print("Trendyol hatasi:", e)
+        print("Trendyol Playwright hatası:", e)
         return None, None
 
 def genel_fiyat_ve_adi(url):
