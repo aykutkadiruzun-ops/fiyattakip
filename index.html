@@ -1141,6 +1141,13 @@ const fmt = n => {
   return '₺' + num.toLocaleString('tr-TR', {minimumFractionDigits:2});
 };
 
+const escText = value => String(value ?? '').replace(/[&<>]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]));
+const escAttr = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const withTimeout = (promise, ms = 8000) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+]);
+
 // Filter
 window.setFilter = (type, el) => {
   currentFilter = type;
@@ -1474,13 +1481,16 @@ function cardHTML(p) {
   else if (p.bildirim_hedef && p.hedef_fiyat) chips.push(`<span class="chip gray">Hedefe ulaşınca</span>`);
 
   const hostname = (() => { try { return new URL(p.url).hostname.replace('www.',''); } catch(e) { return p.url; } })();
+  const safeName = escText(p.urun_adi || 'İsim bekleniyor…');
+  const safeUrl = escAttr(p.url || '#');
+  const safeHost = escText(hostname || 'link');
 
   return `
   <div class="product-card ${cls}">
     <div class="pc-header">
       <div class="pc-info">
-        <div class="pc-name">${p.urun_adi||'İsim bekleniyor…'}</div>
-        <a class="pc-url" href="${p.url}" target="_blank" rel="noopener">${hostname}</a>
+        <div class="pc-name">${safeName}</div>
+        <a class="pc-url" href="${safeUrl}" target="_blank" rel="noopener">${safeHost}</a>
         ${p.updated_at ? `<div style="font-size:10px;color:var(--faint);margin-top:2px">${new Date(p.updated_at).toLocaleDateString('tr-TR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
         ${p.guncelleme_istegi ? `<div style="font-size:10px;color:var(--warning);margin-top:2px">Güncelleme bekleniyor…</div>` : ''}
       </div>
@@ -1492,7 +1502,7 @@ function cardHTML(p) {
         <button class="btn-sm shelf-btn ${p.satin_alindi?'done':''}" onclick="toggleShelf(${p.id},${!!p.satin_alindi})">
           ${p.satin_alindi ? '✓ Rafımda' : 'Rafıma al'}
         </button>
-        <button class="btn-icon" aria-label="Fiyat geçmişini göster" onclick="showHistory(${p.id},'${(p.urun_adi||'Ürün').replace(/'/g,'')}')">
+        <button class="btn-icon" aria-label="Fiyat geçmişini göster" onclick="showHistory(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </button>
         <button class="btn-icon del" aria-label="Ürünü sil" onclick="deleteProduct(${p.id})">
@@ -1504,9 +1514,9 @@ function cardHTML(p) {
       </div>
     </div>
     <div class="more-menu" id="more-menu-${p.id}" style="display:none;margin-top:6px;background:var(--bg);border-radius:9px;border:0.5px solid var(--border);overflow:hidden">
-      <div class="more-menu-item" onclick="showCollectionPicker(${p.id},'${(p.koleksiyon||'').replace(/'/g,'')}');toggleMoreMenu(${p.id})">
+      <div class="more-menu-item" onclick="showCollectionPicker(${p.id});toggleMoreMenu(${p.id})">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        ${p.koleksiyon ? `Koleksiyon: ${p.koleksiyon}` : 'Koleksiyona ekle'}
+        ${p.koleksiyon ? `Koleksiyon: ${escText(p.koleksiyon)}` : 'Koleksiyona ekle'}
       </div>
       <div class="more-menu-item" onclick="showNotifSettings(${p.id},${!!p.bildirim_hedef},${!!p.bildirim_dusus});toggleMoreMenu(${p.id})">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -1830,15 +1840,17 @@ window.createNewCollection = () => {
 // Collection picker
 let pickerUrunId = null;
 
-window.showCollectionPicker = (id, mevcut) => {
+window.showCollectionPicker = (id, mevcut = null) => {
   pickerUrunId = id;
   const input = document.getElementById('picker-koleksiyon-input');
-  input.value = mevcut || '';
+  const urun = allProducts.find(p => p.id === id);
+  const currentCollection = mevcut ?? urun?.koleksiyon ?? '';
+  input.value = currentCollection || '';
   const koleksiyonlar = [...new Set(allProducts.filter(p => p.koleksiyon).map(p => p.koleksiyon))];
   document.getElementById('picker-koleksiyon-list').innerHTML = koleksiyonlar.map(k => `<option value="${k}">`).join('');
   const el = document.getElementById('picker-existing-collections');
   el.innerHTML = koleksiyonlar.map(k => `
-    <button class="chip ${mevcut===k?'green':'gray'}" style="cursor:pointer;border:none"
+    <button class="chip ${currentCollection===k?'green':'gray'}" style="cursor:pointer;border:none"
       onclick="document.getElementById('picker-koleksiyon-input').value='${k.replace(/'/g,"\'")}'">${k}</button>
   `).join('');
   document.getElementById('collection-picker-overlay').classList.add('open');
@@ -1983,28 +1995,60 @@ let chartInstance = null;
 window.closeChartOutside = e => { if(e.target.id==='chart-overlay') closeChart(); };
 window.closeChart = () => document.getElementById('chart-overlay').classList.remove('open');
 
-window.showHistory = async (id, name) => {
-  document.getElementById('chart-overlay').classList.add('open');
-  document.getElementById('chart-title').textContent = name;
-  document.getElementById('chart-sub').textContent = 'Günlük fiyat takibi';
-  document.getElementById('chart-empty').style.display = 'none';
-  document.getElementById('chart-wrap').style.display = 'block';
-  document.getElementById('chart-stats').innerHTML = '';
+window.showHistory = async (id, name = '') => {
+  const overlay = document.getElementById('chart-overlay');
+  const title = document.getElementById('chart-title');
+  const sub = document.getElementById('chart-sub');
+  const empty = document.getElementById('chart-empty');
+  const wrap = document.getElementById('chart-wrap');
+  const stats = document.getElementById('chart-stats');
+  const urun = allProducts.find(p => p.id === id);
 
-  const { data, error } = await sb.from('fiyat_gecmisi').select('fiyat, kontrol_tarihi').eq('urun_id', id).order('kontrol_tarihi', { ascending: true });
-  if (error || !data || data.length === 0) {
-    document.getElementById('chart-empty').style.display = 'block';
-    document.getElementById('chart-wrap').style.display = 'none';
+  overlay.classList.add('open');
+  title.textContent = name || urun?.urun_adi || 'Ürün';
+  sub.textContent = 'Fiyat geçmişi yükleniyor…';
+  empty.style.display = 'none';
+  wrap.style.display = 'none';
+  stats.innerHTML = '';
+
+  let data = [];
+  try {
+    const result = await withTimeout(
+      sb.from('fiyat_gecmisi').select('fiyat, kontrol_tarihi').eq('urun_id', id).order('kontrol_tarihi', { ascending: true }),
+      8000
+    );
+    if (result.error) throw result.error;
+    data = result.data || [];
+  } catch (err) {
+    console.warn('Fiyat geçmişi alınamadı:', err);
+    data = [];
+  }
+
+  let points = data
+    .map(d => ({
+      label: new Date(d.kontrol_tarihi).toLocaleDateString('tr-TR', { day:'numeric', month:'short' }),
+      value: parsePrice(d.fiyat)
+    }))
+    .filter(p => p.value !== null && p.value > 0);
+
+  if (!points.length && urun && parsePrice(urun.son_fiyat)) {
+    points = [{
+      label: urun.updated_at ? new Date(urun.updated_at).toLocaleDateString('tr-TR', { day:'numeric', month:'short' }) : 'Güncel',
+      value: parsePrice(urun.son_fiyat)
+    }];
+  }
+
+  if (!points.length) {
+    sub.textContent = 'İlk fiyat kontrolünden sonra grafik oluşacak.';
+    empty.style.display = 'block';
+    wrap.style.display = 'none';
     return;
   }
 
-  const labels = data.map(d => { const dt = new Date(d.kontrol_tarihi); return dt.toLocaleDateString('tr-TR', { day:'numeric', month:'short' }); });
-  const values = data.map(d => { const p = parsePrice(d.fiyat); return p || 0; }).filter(v => v > 0);
-  if (!values.length) {
-    document.getElementById('chart-empty').style.display = 'block';
-    document.getElementById('chart-wrap').style.display = 'none';
-    return;
-  }
+  const labels = points.map(p => p.label);
+  const values = points.map(p => p.value);
+  wrap.style.display = 'block';
+  sub.textContent = points.length === 1 ? 'Tek fiyat kaydı var' : 'Günlük fiyat takibi';
 
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -2023,6 +2067,13 @@ window.showHistory = async (id, name) => {
       <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">En yüksek</div>
       <div style="font-family:var(--serif);font-size:15px;color:var(--muted);margin-top:3px">₺${max.toLocaleString('tr-TR')}</div>
     </div>`;
+
+  if (typeof Chart === 'undefined') {
+    wrap.style.display = 'none';
+    empty.style.display = 'block';
+    sub.textContent = 'Grafik kütüphanesi yüklenemedi, daha sonra tekrar dene.';
+    return;
+  }
 
   if (chartInstance) chartInstance.destroy();
   const ctx = document.getElementById('priceChart').getContext('2d');
