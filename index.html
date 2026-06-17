@@ -358,6 +358,9 @@
     .pc-price.good    { color: var(--success); }
     .pc-price.drop    { color: var(--success); }
     .pc-price.waiting { font-size: 11px; color: var(--faint); font-weight: 400; margin-top: 4px; font-family: var(--sans); }
+    .pc-price.warning { font-size: 11px; color: var(--warning); font-weight: 500; margin-top: 4px; font-family: var(--sans); }
+    .pc-note { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.35; max-width: 210px; }
+    .pc-note.warn { color: var(--warning); }
     .pc-old-price { font-size: 11px; color: var(--faint); text-decoration: line-through; margin-top: 2px; }
 
     .pc-footer {
@@ -440,6 +443,9 @@
     }
     .field input:focus, .field select:focus { border-color: var(--muted); }
     .field input::placeholder { color: var(--faint); }
+    .field-error { display:none; margin-top:6px; font-size:11px; color:var(--danger); line-height:1.35; }
+    .field.error input { border-color: var(--danger); background: var(--danger-bg); }
+    .field.error .field-error { display:block; }
 
     /* ── NOTIFICATIONS ── */
     .notif-date-label {
@@ -1005,9 +1011,10 @@
     <button class="modal-close" type="button" onclick="closeNewCollectionModal()" aria-label="Yeni koleksiyon penceresini kapat">×</button>
     <div class="modal-handle"></div>
     <h3 id="new-collection-title" style="margin-bottom:16px">Yeni koleksiyon</h3>
-    <div class="field">
+    <div class="field" id="new-collection-field">
       <label>Koleksiyon adı</label>
-      <input type="text" id="new-collection-name" placeholder="örn. Yaz koleksiyonu" onkeydown="if(event.key==='Enter')createNewCollection()" />
+      <input type="text" id="new-collection-name" placeholder="örn. Yaz koleksiyonu" oninput="clearNewCollectionError()" onkeydown="if(event.key==='Enter')createNewCollection()" aria-describedby="new-collection-error" />
+      <div class="field-error" id="new-collection-error" role="alert">Koleksiyon adı gerekli.</div>
     </div>
     <button class="btn-primary" type="button" onclick="createNewCollection()" style="background:var(--text);color:var(--bg)">Koleksiyon oluştur</button>
   </div>
@@ -1512,13 +1519,20 @@ function cardHTML(p, context = 'products') {
   const onTarget = hasFiyat && p.hedef_fiyat && parsePrice(p.son_fiyat) <= parsePrice(p.hedef_fiyat);
   const cls      = onTarget ? 'on-target' : drop ? 'price-drop' : '';
   const priceCls = onTarget ? 'good' : drop ? 'drop' : '';
+  const hasName  = !!(p.urun_adi && String(p.urun_adi).trim());
+  const createdAt = p.created_at || p.created || p.inserted_at || p.updated_at;
+  const pendingMinutes = createdAt ? (Date.now() - new Date(createdAt).getTime()) / 60000 : 0;
+  const isPendingInfo = !hasName || !hasFiyat;
+  const isStalePending = isPendingInfo && pendingMinutes >= 15;
 
   let priceHTML = '';
   if (hasFiyat) {
     priceHTML = `<div class="pc-price ${priceCls}">${fmt(p.son_fiyat)}</div>`;
     if (drop) priceHTML += `<div class="pc-old-price">${fmt(p.ilk_fiyat)}</div>`;
   } else {
-    priceHTML = `<div class="pc-price waiting">Fiyat bekleniyor</div>`;
+    priceHTML = isStalePending
+      ? `<div class="pc-price warning">Bilgi alınamadı</div>`
+      : `<div class="pc-price waiting">Kontrol bekleniyor</div>`;
   }
 
   const chips = [];
@@ -1531,12 +1545,17 @@ function cardHTML(p, context = 'products') {
   if (p.tasarruf && Number(p.tasarruf)>0) chips.push(`<span class="chip green">₺${Number(p.tasarruf).toLocaleString('tr-TR')} tasarruf</span>`);
   if (p.bildirim_dusus) chips.push(`<span class="chip gray">Her düşüşte</span>`);
   else if (p.bildirim_hedef && p.hedef_fiyat) chips.push(`<span class="chip gray">Hedefe ulaşınca</span>`);
+  if (isStalePending) chips.push(`<span class="chip orange">Ürün bilgisi alınamadı</span>`);
+  else if (isPendingInfo) chips.push(`<span class="chip orange">Ürün bilgisi alınıyor</span>`);
 
   const hostname = (() => { try { return new URL(p.url).hostname.replace('www.',''); } catch(e) { return p.url; } })();
-  const safeName = escText(p.urun_adi || 'İsim bekleniyor…');
+  const safeName = escText(hasName ? p.urun_adi : (isStalePending ? 'Ürün bilgisi alınamadı' : 'Ürün bilgisi bekleniyor…'));
   const safeUrl = escAttr(p.url || '#');
   const safeHost = escText(hostname || 'link');
   const menuId = `more-menu-${context}-${p.id}`;
+  const pendingNote = isStalePending
+    ? `<div class="pc-note warn">Link ürün sayfası olmayabilir. Menüden “Fiyatı güncelle”yi deneyebilir veya ürünü silebilirsin.</div>`
+    : (isPendingInfo ? `<div class="pc-note">Ürün adı ve fiyatı ilk kontrolden sonra burada görünecek.</div>` : '');
 
   return `
   <div class="product-card ${cls}">
@@ -1544,6 +1563,7 @@ function cardHTML(p, context = 'products') {
       <div class="pc-info">
         <div class="pc-name">${safeName}</div>
         <a class="pc-url" href="${safeUrl}" target="_blank" rel="noopener">${safeHost}</a>
+        ${pendingNote}
         ${p.updated_at ? `<div style="font-size:10px;color:var(--faint);margin-top:2px">${new Date(p.updated_at).toLocaleDateString('tr-TR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
         ${p.guncelleme_istegi ? `<div style="font-size:10px;color:var(--warning);margin-top:2px">Güncelleme bekleniyor…</div>` : ''}
       </div>
@@ -1865,11 +1885,13 @@ window.openNewCollectionModal = () => {
   hideToast();
   const input = document.getElementById('new-collection-name');
   if (input) input.value = '';
+  clearNewCollectionError();
   document.getElementById('new-collection-overlay').classList.add('open');
   setTimeout(() => input?.focus(), 150);
 };
 
 window.closeNewCollectionModal = () => {
+  clearNewCollectionError();
   document.getElementById('new-collection-overlay').classList.remove('open');
 };
 
@@ -1877,10 +1899,24 @@ window.closeNewCollectionOutside = e => {
   if (e.target.id === 'new-collection-overlay') closeNewCollectionModal();
 };
 
+window.clearNewCollectionError = () => {
+  const field = document.getElementById('new-collection-field');
+  const input = document.getElementById('new-collection-name');
+  field?.classList.remove('error');
+  input?.removeAttribute('aria-invalid');
+};
+
 window.createNewCollection = () => {
   const input = document.getElementById('new-collection-name');
   const isim = input.value.trim();
-  if (!isim) { showToast('Koleksiyon adı gerekli.', 'error'); input.focus(); return; }
+  if (!isim) {
+    document.getElementById('new-collection-field')?.classList.add('error');
+    input.setAttribute('aria-invalid', 'true');
+    showToast('Koleksiyon adı gerekli.', 'error');
+    input.focus();
+    return;
+  }
+  clearNewCollectionError();
   closeNewCollectionModal();
   openCollection(isim);
   showToast(`"${isim}" koleksiyonu oluşturuldu!`, 'success');
@@ -2075,7 +2111,7 @@ window.showHistory = async (id, name = '') => {
   const urun = allProducts.find(p => p.id === id);
 
   overlay.classList.add('open');
-  title.textContent = name || urun?.urun_adi || 'Ürün';
+  title.textContent = name || urun?.urun_adi || 'Fiyat geçmişi';
   sub.textContent = 'Fiyat geçmişi yükleniyor…';
   empty.style.display = 'none';
   wrap.style.display = 'none';
@@ -2109,7 +2145,9 @@ window.showHistory = async (id, name = '') => {
   }
 
   if (!points.length) {
-    sub.textContent = 'İlk fiyat kontrolünden sonra grafik oluşacak.';
+    sub.textContent = urun?.urun_adi
+      ? 'İlk fiyat kontrolünden sonra grafik oluşacak.'
+      : 'Ürün bilgisi bekleniyor. İlk fiyat kontrolünden sonra grafik oluşacak.';
     empty.style.display = 'block';
     wrap.style.display = 'none';
     return;
