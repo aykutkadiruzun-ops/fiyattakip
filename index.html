@@ -1088,6 +1088,20 @@
   </div>
 </div>
 
+<!-- MODAL: SİLME ONAYI -->
+<div class="modal-overlay" id="delete-confirm-overlay" onclick="closeDeleteConfirmOutside(event)">
+  <div class="modal" style="padding-bottom:36px" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+    <button class="modal-close" type="button" onclick="closeDeleteConfirm()" aria-label="Silme onayını kapat">×</button>
+    <div class="modal-handle"></div>
+    <h3 id="delete-confirm-title" style="margin-bottom:8px">Ürünü sil?</h3>
+    <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:18px">Bu ürün raftan kalıcı olarak silinecek.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" type="button" onclick="closeDeleteConfirm()" style="flex:1">İptal</button>
+      <button class="btn-primary" id="btn-confirm-delete" type="button" onclick="confirmDeleteProduct()" style="flex:1;background:var(--danger,#c0392b);color:white">Sil</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
@@ -1111,12 +1125,18 @@ window.hideToast = () => {
   if (!t) return;
   clearTimeout(t._t);
   t.className = '';
+  t.textContent = '';
 };
 
 window.showToast = (msg, type='') => {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'show ' + type;
-  clearTimeout(t._t); t._t = setTimeout(() => t.className='', 2500);
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => {
+    t.className = '';
+    t.textContent = '';
+  }, 2500);
 };
 
 const parsePrice = n => {
@@ -1147,6 +1167,36 @@ const withTimeout = (promise, ms = 8000) => Promise.race([
   promise,
   new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
 ]);
+
+function clearRenderedProductLists() {
+  ['home-products','all-products','shelf-list','collection-detail-products','add-to-collection-list'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+}
+
+function closeProductMenu(menu) {
+  if (menu) menu.style.display = 'none';
+}
+
+function isKnownListingPath(host, path, parsed) {
+  const lowerPath = path.toLowerCase();
+  const params = parsed.searchParams;
+  if (/(^|\/)(c|sr|magaza|brand|kategori|arama|search|sepet|login|account)(\/|$)/i.test(lowerPath)) return true;
+  if (params.has('q') || params.has('searchTerm')) return true;
+  if (host.includes('zara.com') && /-l\d+\.html$/i.test(lowerPath)) return true;
+  if (host.includes('hm.com') && /(ladies|men|kids|home|sale|new-arrivals|clothing)(\/|$)/i.test(lowerPath) && !/productpage/i.test(lowerPath)) return true;
+  return false;
+}
+
+function hasKnownProductPattern(host, path) {
+  const lowerPath = path.toLowerCase();
+  if (host.includes('trendyol.com')) return /-p-\d+/i.test(path) || /\/p\//i.test(path);
+  if (host.includes('zara.com')) return /-p\d+.*\.html$/i.test(lowerPath) || /\/p\d+/i.test(lowerPath);
+  if (host.includes('bershka.com')) return /-p\d+/i.test(lowerPath) || /\/p\d+/i.test(lowerPath);
+  if (host.includes('hm.com')) return /productpage\.\d+\.html/i.test(lowerPath) || /\/product\//i.test(lowerPath);
+  return true;
+}
 
 // Filter
 window.setFilter = (type, el) => {
@@ -1356,6 +1406,8 @@ sb.auth.onAuthStateChange((_e, session) => {
 window.goPage = name => {
   hideToast();
   document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.more-menu').forEach(closeProductMenu);
+  clearRenderedProductLists();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn:not(.center-btn)').forEach(b => b.classList.remove('active'));
   document.getElementById('page-'+name)?.classList.add('active');
@@ -1422,7 +1474,7 @@ function renderHomeProducts() {
     el.innerHTML=`<div class="empty"><div class="eicon">🛍️</div><p>Henüz takip ettiğin ürün yok.<br>+ butonuna basarak ekleyebilirsin.</p></div>`;
     return;
   }
-  el.innerHTML = list.map(cardHTML).join('');
+  el.innerHTML = list.map(p => cardHTML(p, 'home')).join('');
 }
 
 // All products
@@ -1449,12 +1501,12 @@ function renderAllProducts() {
   }
 
   document.getElementById('product-count').textContent = list.length + ' ürün';
-  el.innerHTML = list.length ? list.map(cardHTML).join('') :
+  el.innerHTML = list.length ? list.map(p => cardHTML(p, 'products')).join('') :
     `<div class="empty"><div class="eicon">📦</div><p>Ürün bulunamadı.</p></div>`;
 }
 
 // Card HTML
-function cardHTML(p) {
+function cardHTML(p, context = 'products') {
   const hasFiyat = parsePrice(p.son_fiyat) !== null;
   const drop     = hasFiyat && p.ilk_fiyat && parsePrice(p.son_fiyat) < parsePrice(p.ilk_fiyat);
   const onTarget = hasFiyat && p.hedef_fiyat && parsePrice(p.son_fiyat) <= parsePrice(p.hedef_fiyat);
@@ -1484,6 +1536,7 @@ function cardHTML(p) {
   const safeName = escText(p.urun_adi || 'İsim bekleniyor…');
   const safeUrl = escAttr(p.url || '#');
   const safeHost = escText(hostname || 'link');
+  const menuId = `more-menu-${context}-${p.id}`;
 
   return `
   <div class="product-card ${cls}">
@@ -1508,21 +1561,21 @@ function cardHTML(p) {
         <button class="btn-icon del" aria-label="Ürünü sil" onclick="deleteProduct(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
-        <button class="btn-icon" aria-label="Ürün seçenekleri" onclick="toggleMoreMenu(${p.id})">
+        <button class="btn-icon" aria-label="Ürün seçenekleri" onclick="toggleMoreMenu(this)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
       </div>
     </div>
-    <div class="more-menu" id="more-menu-${p.id}" style="display:none;margin-top:6px;background:var(--bg);border-radius:9px;border:0.5px solid var(--border);overflow:hidden">
-      <div class="more-menu-item" onclick="showCollectionPicker(${p.id});toggleMoreMenu(${p.id})">
+    <div class="more-menu" id="${menuId}" style="display:none;margin-top:6px;background:var(--bg);border-radius:9px;border:0.5px solid var(--border);overflow:hidden">
+      <div class="more-menu-item" onclick="showCollectionPicker(${p.id});closeProductMenu(this.closest('.more-menu'))">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         ${p.koleksiyon ? `Koleksiyon: ${escText(p.koleksiyon)}` : 'Koleksiyona ekle'}
       </div>
-      <div class="more-menu-item" onclick="showNotifSettings(${p.id},${!!p.bildirim_hedef},${!!p.bildirim_dusus});toggleMoreMenu(${p.id})">
+      <div class="more-menu-item" onclick="showNotifSettings(${p.id},${!!p.bildirim_hedef},${!!p.bildirim_dusus});closeProductMenu(this.closest('.more-menu'))">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         Bildirim ayarları
       </div>
-      <div class="more-menu-item" onclick="manualUpdate(${p.id});toggleMoreMenu(${p.id})">
+      <div class="more-menu-item" onclick="manualUpdate(${p.id});closeProductMenu(this.closest('.more-menu'))">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-8.49"/></svg>
         Fiyatı güncelle
       </div>
@@ -1613,14 +1666,7 @@ function shelfCardHTML(p) {
   </div>`;
 }
 
-window.deleteFromShelf = async id => {
-  if (!confirm('Bu ürünü silmek istiyor musun?')) return;
-  const { error } = await sb.from('urunler').delete().eq('id', id);
-  if (error) { showToast('Silinemedi.', 'error'); return; }
-  showToast('Silindi.', 'success');
-  await loadProducts();
-  renderShelf();
-};
+window.deleteFromShelf = id => openDeleteConfirm(id, 'shelf');
 
 // Add product
 function validateProductUrl(rawUrl) {
@@ -1636,11 +1682,14 @@ function validateProductUrl(rawUrl) {
   if (!path || path === '/') {
     return { ok:false, message:'Ana sayfa değil, ürün sayfası linki gir.' };
   }
-  if (host.includes('trendyol.com') && !(/-p-\d+/i.test(path) || /\/p\//i.test(path))) {
-    return { ok:false, message:'Trendyol için ürün detay linki gir.' };
+  if (isKnownListingPath(host, path, parsed)) {
+    return { ok:false, message:'Kategori/arama değil, ürün sayfası linki gir.' };
   }
-  const segments = path.split('/').filter(Boolean);
-  if (segments.length < 1 || /^(c|sr|magaza|brand|kategori|arama|search|sepet|login|account)$/i.test(segments[0])) {
+  if (!hasKnownProductPattern(host, path)) {
+    if (host.includes('trendyol.com')) return { ok:false, message:'Trendyol için ürün detay linki gir.' };
+    if (host.includes('zara.com')) return { ok:false, message:'Zara için ürün detay linki gir.' };
+    if (host.includes('bershka.com')) return { ok:false, message:'Bershka için ürün detay linki gir.' };
+    if (host.includes('hm.com')) return { ok:false, message:'H&M için ürün detay linki gir.' };
     return { ok:false, message:'Ürün sayfası linki gir.' };
   }
   return { ok:true, url: parsed.href };
@@ -1972,22 +2021,43 @@ window.copyShareLink = () => {
 };
 
 // More menu
-window.toggleMoreMenu = id => {
-  const menu = document.getElementById('more-menu-' + id);
+window.toggleMoreMenu = trigger => {
+  const card = trigger?.closest?.('.product-card');
+  const menu = card?.querySelector?.('.more-menu');
   if (!menu) return;
-  const isOpen = menu.style.display !== 'none';
-  document.querySelectorAll('.more-menu').forEach(m => m.style.display = 'none');
+  const isOpen = getComputedStyle(menu).display !== 'none';
+  document.querySelectorAll('.more-menu').forEach(closeProductMenu);
   if (!isOpen) menu.style.display = 'block';
 };
 
 // Delete
-window.deleteProduct = async id => {
-  if (!confirm('Bu ürünü silmek istiyor musun?')) return;
-  const { error } = await sb.from('urunler').delete().eq('id',id);
+let pendingDelete = null;
+window.openDeleteConfirm = (id, source = 'products') => {
+  pendingDelete = { id, source };
+  hideToast();
+  document.getElementById('delete-confirm-overlay').classList.add('open');
+};
+window.closeDeleteConfirm = () => {
+  pendingDelete = null;
+  document.getElementById('delete-confirm-overlay').classList.remove('open');
+};
+window.closeDeleteConfirmOutside = e => { if (e.target.id === 'delete-confirm-overlay') closeDeleteConfirm(); };
+window.deleteProduct = id => openDeleteConfirm(id, 'products');
+window.confirmDeleteProduct = async () => {
+  if (!pendingDelete) return;
+  const { id, source } = pendingDelete;
+  const btn = document.getElementById('btn-confirm-delete');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  const { error } = await sb.from('urunler').delete().eq('id', id);
+  btn.disabled = false;
+  btn.innerHTML = 'Sil';
   if (error) { showToast('Silinemedi.','error'); return; }
+  closeDeleteConfirm();
   showToast('Silindi.','success');
   await loadProducts();
-  renderAllProducts();
+  if (source === 'shelf') renderShelf();
+  else renderAllProducts();
 };
 
 // Price history
