@@ -1186,6 +1186,16 @@ function closeProductMenu(menu) {
   if (menu) menu.style.display = 'none';
 }
 
+const COMMON_TRACKING_PARAMS = [
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id',
+  'fbclid', 'gclid', 'dclid', 'gbraid', 'wbraid', 'yclid', 'mc_cid', 'mc_eid',
+  'igshid', 'ref', 'referrer', 'source', 'share', 'shared', 'url_src'
+];
+
+function isKnownRedirectOrShortLinkHost(host) {
+  return /(^|\.)(app\.adjust\.com|onelink\.me|app\.link|bit\.ly|cutt\.ly|tinyurl\.com|t\.co|lnkd\.in|shorturl\.at|rebrand\.ly)$/i.test(host);
+}
+
 function isKnownListingPath(host, path, parsed) {
   const lowerPath = path.toLowerCase();
   const params = parsed.searchParams;
@@ -1209,12 +1219,11 @@ function hasKnownProductPattern(host, path) {
 function normalizeProductUrl(parsed) {
   const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
   const clean = new URL(parsed.href);
+  COMMON_TRACKING_PARAMS.forEach(param => clean.searchParams.delete(param));
   if (host.includes('hepsiburada.com')) {
-    ['isFashion', 'url_src', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(param => {
-      clean.searchParams.delete(param);
-    });
-    clean.hash = '';
+    clean.searchParams.delete('isFashion');
   }
+  clean.hash = '';
   return clean.href;
 }
 
@@ -1711,6 +1720,9 @@ function validateProductUrl(rawUrl) {
     return { ok:false, message:'Geçerli bir link gir.' };
   }
   const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+  if (isKnownRedirectOrShortLinkHost(host)) {
+    return { ok:false, message:'Kısa/yönlendirme linki değil, gerçek ürün sayfası linkini gir.' };
+  }
   const path = parsed.pathname.replace(/\/+$/, '');
   if (!path || path === '/') {
     return { ok:false, message:'Ana sayfa değil, ürün sayfası linki gir.' };
