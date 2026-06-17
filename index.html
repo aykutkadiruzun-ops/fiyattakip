@@ -1202,7 +1202,20 @@ function hasKnownProductPattern(host, path) {
   if (host.includes('zara.com')) return /-p\d+.*\.html$/i.test(lowerPath) || /\/p\d+/i.test(lowerPath);
   if (host.includes('bershka.com')) return /-p\d+/i.test(lowerPath) || /\/p\d+/i.test(lowerPath);
   if (host.includes('hm.com')) return /productpage\.\d+\.html/i.test(lowerPath) || /\/product\//i.test(lowerPath);
+  if (host.includes('hepsiburada.com')) return /-p-[a-z0-9]+/i.test(lowerPath);
   return true;
+}
+
+function normalizeProductUrl(parsed) {
+  const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+  const clean = new URL(parsed.href);
+  if (host.includes('hepsiburada.com')) {
+    ['isFashion', 'url_src', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(param => {
+      clean.searchParams.delete(param);
+    });
+    clean.hash = '';
+  }
+  return clean.href;
 }
 
 // Filter
@@ -1712,7 +1725,7 @@ function validateProductUrl(rawUrl) {
     if (host.includes('hm.com')) return { ok:false, message:'H&M için ürün detay linki gir.' };
     return { ok:false, message:'Ürün sayfası linki gir.' };
   }
-  return { ok:true, url: parsed.href };
+  return { ok:true, url: normalizeProductUrl(parsed) };
 }
 
 window.addProduct = async () => {
