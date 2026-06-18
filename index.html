@@ -1616,7 +1616,7 @@ function cardHTML(p, context = 'products') {
       ${chips.length ? `<div class="pc-chips">${chips.join('')}</div>` : '<div></div>'}
       <div class="pc-actions">
         <button class="btn-sm shelf-btn ${p.satin_alindi?'done':''}" onclick="toggleShelf(${p.id},${!!p.satin_alindi})">
-          ${p.satin_alindi ? '✓ Rafımda' : 'Rafıma al'}
+          ${p.satin_alindi ? '✓ Satın alındı' : 'Satın aldım'}
         </button>
         <button class="btn-icon" aria-label="Fiyat geçmişini göster" onclick="showHistory(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -1720,7 +1720,7 @@ function shelfCardHTML(p) {
     <div class="pc-footer">
       ${saving ? `<div class="pc-chips">${saving}</div>` : '<div></div>'}
       <div class="pc-actions">
-        <button class="btn-sm shelf-btn done" onclick="toggleShelf(${p.id}, true); goPage('shelf')">✓ Rafımda</button>
+        <button class="btn-sm shelf-btn done" onclick="toggleShelf(${p.id}, true); goPage('shelf')">✓ Satın alındı</button>
         <button class="btn-icon del" aria-label="Rafımdan sil" onclick="deleteFromShelf(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
