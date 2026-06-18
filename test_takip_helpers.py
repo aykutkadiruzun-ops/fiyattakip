@@ -164,6 +164,56 @@ def test_scraperapi_403_disables_more_scraper_calls():
     assert len(calls) == 1
 
 
+def test_fetch_product_data_skips_proxy_attempts_after_scraperapi_disabled():
+    import takip
+
+    modes = []
+
+    old_direct = takip.fetch_direct
+    old_trendyol = takip.fetch_trendyol_api
+    old_scraper = takip.fetch_scraperapi
+    old_playwright = takip.fetch_playwright
+    old_disabled = takip.SCRAPERAPI_DISABLED
+    old_key = takip.SCRAPER_KEY
+
+    def fake_direct(url):
+        modes.append("direct")
+        return None, "direct_failed"
+
+    def fake_trendyol(url):
+        modes.append("trendyol_api")
+        return None, "trendyol_api_failed"
+
+    def fake_scraper(url, render_js=False, premium=False):
+        modes.append("scraper")
+        raise AssertionError("ScraperAPI should not be called when disabled")
+
+    def fake_playwright(url):
+        modes.append("playwright")
+        return None, "playwright_disabled"
+
+    takip.fetch_direct = fake_direct
+    takip.fetch_trendyol_api = fake_trendyol
+    takip.fetch_scraperapi = fake_scraper
+    takip.fetch_playwright = fake_playwright
+    takip.SCRAPERAPI_DISABLED = True
+    takip.SCRAPER_KEY = "KEY"
+    try:
+        price, name, mode = takip.fetch_product_data("https://www.trendyol.com/x/y-p-123")
+    finally:
+        takip.fetch_direct = old_direct
+        takip.fetch_trendyol_api = old_trendyol
+        takip.fetch_scraperapi = old_scraper
+        takip.fetch_playwright = old_playwright
+        takip.SCRAPERAPI_DISABLED = old_disabled
+        takip.SCRAPER_KEY = old_key
+
+    assert price is None
+    assert name is None
+    assert mode == "playwright_disabled"
+    assert modes == ["direct", "trendyol_api", "playwright"]
+
+
 def test_next_check_hours_success_and_failure_backoff():
     from takip import next_check_iso
 

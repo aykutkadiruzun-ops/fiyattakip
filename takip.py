@@ -501,15 +501,22 @@ def fetch_product_data(url: str) -> Tuple[Optional[str], Optional[str], str]:
     if "trendyol.com" in domain:
         attempts.append(fetch_trendyol_api(url))
 
-    # 2) Ucuz proxy: JS render yok, premium yok.
-    attempts.append(fetch_scraperapi(url, render_js=False, premium=False))
+    # 2-4) Proxy denemeleri. ScraperAPI 403 verdiyse aynı run içinde tekrar zorlamayız.
+    if SCRAPER_KEY and not SCRAPERAPI_DISABLED:
+        # Ucuz proxy: JS render yok, premium yok.
+        attempts.append(fetch_scraperapi(url, render_js=False, premium=False))
 
-    # 3) Daha pahalı: premium proxy ama JS render hâlâ yok.
-    if any(x in domain for x in ["trendyol.com", "amazon.", "zara.com", "bershka.com"]):
-        attempts.append(fetch_scraperapi(url, render_js=False, premium=True))
+        if not SCRAPERAPI_DISABLED and any(x in domain for x in ["trendyol.com", "amazon.", "zara.com", "bershka.com"]):
+            # Daha pahalı: premium proxy ama JS render hâlâ yok.
+            attempts.append(fetch_scraperapi(url, render_js=False, premium=True))
 
-    # 4) En pahalı ScraperAPI: render.
-    attempts.append(fetch_scraperapi(url, render_js=True, premium=True))
+        if not SCRAPERAPI_DISABLED:
+            # En pahalı ScraperAPI: render.
+            attempts.append(fetch_scraperapi(url, render_js=True, premium=True))
+    elif SCRAPERAPI_DISABLED:
+        attempts.append((None, "proxy_quota_or_key_blocked"))
+    else:
+        attempts.append((None, "scraperapi_missing_key"))
 
     # 5) Son çare: Playwright. Varsayılan kapalı; PLAYWRIGHT_FALLBACK=true gerekir.
     attempts.append(fetch_playwright(url))
