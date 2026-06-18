@@ -1440,10 +1440,21 @@ sb.auth.onAuthStateChange((_e, session) => {
     document.getElementById('app-screen').style.display  = 'none';
   }
 });
+  let pageHistory = [];
+
+window.goBack = () => {
+  if (pageHistory.length > 1) {
+    pageHistory.pop();
+    goPage(pageHistory.pop());
+  }
+};
 
 // Page nav
 window.goPage = name => {
   hideToast();
+  pageHistory.push(name);
+  const backBtn = document.getElementById('topbar-back');
+  if (backBtn) backBtn.style.display = name === 'home' ? 'none' : '';
   document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.more-menu').forEach(closeProductMenu);
   clearRenderedProductLists();
