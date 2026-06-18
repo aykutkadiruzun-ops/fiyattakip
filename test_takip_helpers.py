@@ -157,11 +157,20 @@ def test_next_check_hours_success_and_failure_backoff():
 
 
 def test_should_skip_product_respects_next_check_and_purchased():
-    from takip import should_skip_product
+    import takip
 
-    assert should_skip_product({"satin_alindi": True, "guncelleme_istegi": True}) is True
-    assert should_skip_product({"sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is True
-    assert should_skip_product({"guncelleme_istegi": True, "sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is False
+    old_force = takip.FORCE_CHECK_ALL
+    try:
+        takip.FORCE_CHECK_ALL = False
+        assert takip.should_skip_product({"satin_alindi": True, "guncelleme_istegi": True}) is True
+        assert takip.should_skip_product({"sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is True
+        assert takip.should_skip_product({"guncelleme_istegi": True, "sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is False
+
+        takip.FORCE_CHECK_ALL = True
+        assert takip.should_skip_product({"sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is False
+        assert takip.should_skip_product({"satin_alindi": True, "sonraki_kontrol": None}) is True
+    finally:
+        takip.FORCE_CHECK_ALL = old_force
 
 
 def test_due_products_query_filters_by_next_check():

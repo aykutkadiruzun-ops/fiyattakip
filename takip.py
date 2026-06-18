@@ -499,6 +499,9 @@ def should_skip_product(urun: Dict[str, Any]) -> bool:
     # Kullanıcı satın aldı/rafıma aldı olarak işaretlediyse fiyat takibi durur.
     if urun.get("satin_alindi") is True:
         return True
+    # Manuel testte aktif ürünleri kontrol zamanını beklemeden dene.
+    if FORCE_CHECK_ALL:
+        return False
     # Manuel güncelleme isteği varsa zamanı bekleme.
     if urun.get("guncelleme_istegi"):
         return False
