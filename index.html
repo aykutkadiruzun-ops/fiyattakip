@@ -834,7 +834,8 @@
     <div class="profile-hero">
       <div class="avatar" id="avatar-initials">?</div>
       <div>
-        <div class="profile-name" id="profile-email">—</div>
+        <div class="profile-name" id="profile-display-name">—</div>
+    <div class="profile-email-text" id="profile-email">—</div>
         <div class="profile-since">Rafta üyesi</div>
       </div>
     </div>
@@ -1256,13 +1257,17 @@ window.doLogin = async () => {
 };
 
 window.doSignup = async () => {
+  const name  = document.getElementById('signup-name').value.trim();
   const email = document.getElementById('signup-email').value.trim();
   const pass  = document.getElementById('signup-pass').value;
   if (!email||!pass) { showErr('E-posta ve şifre gerekli.'); return; }
   if (pass.length<6) { showErr('Şifre en az 6 karakter olmalı.'); return; }
   const btn = document.getElementById('btn-signup');
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
-  const { error } = await sb.auth.signUp({ email, password: pass });
+  const { error } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { full_name: name || email.split('@')[0] } }
+  });
   btn.innerHTML='Hesap oluştur'; btn.disabled=false;
   if (error) { showErr(error.message); return; }
   const ok = document.getElementById('auth-success');
@@ -1419,8 +1424,10 @@ sb.auth.onAuthStateChange((_e, session) => {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app-screen').style.display  = 'block';
     const email = session.user.email;
-    document.getElementById('profile-email').textContent  = email;
-    document.getElementById('avatar-initials').textContent = email[0].toUpperCase();
+    const fullName = session.user.user_metadata?.full_name || email.split('@')[0];
+    document.getElementById('profile-display-name').textContent = fullName;
+    document.getElementById('profile-email').textContent = email;
+    document.getElementById('avatar-initials').textContent = fullName[0].toUpperCase();
     document.getElementById('app-screen').scrollTop = 0;
     window.scrollTo(0,0);
     loadProducts();
