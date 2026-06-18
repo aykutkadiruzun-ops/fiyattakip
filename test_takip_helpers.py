@@ -174,6 +174,17 @@ def test_due_products_query_filters_by_next_check():
     assert "limit=25" in path
 
 
+def test_extract_browser_fallback_url_from_trendyol_intent_redirect():
+    from takip import extract_browser_fallback_url
+
+    intent = (
+        "intent://123456?source=seller_store"
+        "#Intent;scheme=https;package=trendyol.com;"
+        "S.browser_fallback_url=https%3A%2F%2Fwww.trendyol.com%2Fgenel-tedarik%2Fkabartma-desenli-p-123456%3FmerchantId%3D123;end"
+    )
+    assert extract_browser_fallback_url(intent) == "https://www.trendyol.com/genel-tedarik/kabartma-desenli-p-123456?merchantId=123"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in globals().items() if k.startswith("test_") and callable(v)]
     for test in tests:

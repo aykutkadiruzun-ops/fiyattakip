@@ -322,13 +322,36 @@ def clean_name(name: Any) -> Optional[str]:
     return text[:180] if text else None
 
 
+def extract_browser_fallback_url(location: str) -> Optional[str]:
+    if not location:
+        return None
+    marker = "browser_fallback_url="
+    if marker not in location:
+        return None
+    raw = location.split(marker, 1)[1].split(";", 1)[0].split("&", 1)[0]
+    fallback = urllib.parse.unquote(raw)
+    if fallback.startswith("http://") or fallback.startswith("https://"):
+        return fallback
+    return None
+
+
 def resolve_short_url(url: str) -> str:
     if "ty.gl" not in url:
         return url
     try:
         req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": UA_MOBILE})
         with urllib.request.urlopen(req, timeout=20) as r:
-            return r.url
+            resolved = extract_browser_fallback_url(r.url) or r.url
+            print("Kisa URL cozuldu:", resolved)
+            return resolved
+    except urllib.error.HTTPError as e:
+        location = e.headers.get("Location") if e.headers else None
+        fallback = extract_browser_fallback_url(location or "")
+        if fallback:
+            print("Kisa URL intent fallback ile cozuldu:", fallback)
+            return fallback
+        print("Kisa URL cozulemedi:", e)
+        return url
     except Exception as e:
         print("Kisa URL cozulemedi:", e)
         return url
