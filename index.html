@@ -908,6 +908,13 @@
         </div>
         <span class="menu-arrow">›</span>
       </div>
+      <div class="menu-item" onclick="sendCollaboration()">
+  <div class="menu-left">
+    <div class="menu-icon-wrap">🤝</div>
+    İşbirliği & iletişim
+  </div>
+  <span class="menu-arrow">›</span>
+</div>
     </div>
     <button class="btn-logout" onclick="doLogout()">Çıkış yap</button>
   </div>
@@ -1283,6 +1290,13 @@ window.sendFeedback = () => {
   const subject = encodeURIComponent('Rafta Geri Bildirim');
   const body = encodeURIComponent('Merhaba, geri bildirimim: ');
   window.open('mailto:destek@rafta.net?subject=' + subject + '&body=' + body);
+};
+
+window.sendCollaboration = () => {
+  const subject = encodeURIComponent('İşbirliği Teklifi');
+  const body = encodeURIComponent('Merhaba, işbirliği hakkında görüşmek istiyorum: ');
+  window.open('mailto:iletisim@rafta.net?subject=' + subject + '&body=' + body);
+};
 };
 
 window.shareApp = async () => {
