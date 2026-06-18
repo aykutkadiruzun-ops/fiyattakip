@@ -62,8 +62,10 @@ def test_safe_patch_product_retries_without_missing_supabase_columns(monkeypatch
         if "son_kontrol" in data:
             raise FakeHTTPError('{"message":"Could not find the \'son_kontrol\' column of \'urunler\' in the schema cache"}')
 
-    old = takip.supabase_patch
+    old_patch = takip.supabase_patch
+    old_missing = set(getattr(takip, "MISSING_SUPABASE_COLUMNS", set()))
     takip.supabase_patch = fake_patch
+    takip.MISSING_SUPABASE_COLUMNS.clear()
     try:
         takip.safe_patch_product(1, {
             "son_fiyat": "729,95 TL",
@@ -73,12 +75,73 @@ def test_safe_patch_product_retries_without_missing_supabase_columns(monkeypatch
             "guncelleme_istegi": False,
         })
     finally:
-        takip.supabase_patch = old
+        takip.supabase_patch = old_patch
+        takip.MISSING_SUPABASE_COLUMNS.clear()
+        takip.MISSING_SUPABASE_COLUMNS.update(old_missing)
 
     assert len(calls) == 3
     assert "hata_sayisi" not in calls[-1]
     assert "son_kontrol" not in calls[-1]
     assert calls[-1]["son_fiyat"] == "729,95 TL"
+
+
+def test_safe_patch_product_remembers_missing_columns_for_next_product():
+    import takip
+
+    calls = []
+    old_patch = takip.supabase_patch
+    old_missing = set(getattr(takip, "MISSING_SUPABASE_COLUMNS", set()))
+    takip.MISSING_SUPABASE_COLUMNS.clear()
+    takip.MISSING_SUPABASE_COLUMNS.update({"hata_sayisi", "son_kontrol"})
+
+    def fake_patch(path, data):
+        calls.append(dict(data))
+
+    takip.supabase_patch = fake_patch
+    try:
+        takip.safe_patch_product(2, {
+            "son_fiyat": "729,95 TL",
+            "hata_sayisi": 0,
+            "son_kontrol": "2026-01-01T00:00:00+00:00",
+            "guncelleme_istegi": False,
+        })
+    finally:
+        takip.supabase_patch = old_patch
+        takip.MISSING_SUPABASE_COLUMNS.clear()
+        takip.MISSING_SUPABASE_COLUMNS.update(old_missing)
+
+    assert len(calls) == 1
+    assert calls[0] == {"son_fiyat": "729,95 TL", "guncelleme_istegi": False}
+
+
+def test_scraperapi_403_disables_more_scraper_calls():
+    import takip
+
+    calls = []
+
+    class FakeHTTPError(urllib.error.HTTPError):
+        def __init__(self):
+            super().__init__("url", 403, "Forbidden", None, None)
+
+    def fake_http_text(url, timeout=25):
+        calls.append(url)
+        raise FakeHTTPError()
+
+    old_text = takip.http_text
+    old_disabled = takip.SCRAPERAPI_DISABLED
+    old_key = takip.SCRAPER_KEY
+    takip.http_text = fake_http_text
+    takip.SCRAPERAPI_DISABLED = False
+    takip.SCRAPER_KEY = "KEY"
+    try:
+        assert takip.fetch_scraperapi("https://example.com/p1")[1].endswith("_forbidden")
+        assert takip.fetch_scraperapi("https://example.com/p2")[1] == "scraperapi_disabled_after_403"
+    finally:
+        takip.http_text = old_text
+        takip.SCRAPERAPI_DISABLED = old_disabled
+        takip.SCRAPER_KEY = old_key
+
+    assert len(calls) == 1
 
 
 if __name__ == "__main__":

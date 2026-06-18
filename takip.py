@@ -33,6 +33,11 @@ PROXY_PASSWORD = os.environ.get("PROXY_PASSWORD", "")
 PLAYWRIGHT_FALLBACK = os.environ.get("PLAYWRIGHT_FALLBACK", "false").lower() == "true"
 MAX_PRODUCTS_PER_RUN = int(os.environ.get("MAX_PRODUCTS_PER_RUN", "40"))
 
+# Run içinde öğrenilen durumlar. Amaç: aynı GitHub Actions çalışmasında
+# aynı 400/403 hatalarını her ürün için tekrar tekrar üretmemek.
+MISSING_SUPABASE_COLUMNS = set()
+SCRAPERAPI_DISABLED = False
+
 UA_DESKTOP = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -143,11 +148,21 @@ def fetch_direct(url: str) -> Tuple[Optional[str], str]:
 
 
 def fetch_scraperapi(url: str, render_js: bool = False, premium: bool = False) -> Tuple[Optional[str], str]:
+    global SCRAPERAPI_DISABLED
     if not SCRAPER_KEY:
         return None, "scraperapi_missing_key"
+    if SCRAPERAPI_DISABLED:
+        return None, "scraperapi_disabled_after_403"
     mode = f"scraperapi_render_{render_js}_premium_{premium}"
     try:
         return http_text(build_scraperapi_url(url, render_js=render_js, premium=premium), timeout=75), mode
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            SCRAPERAPI_DISABLED = True
+            print(mode, "403 Forbidden; ScraperAPI bu run icin devre disi birakildi. Key/limit/kredi kontrol edilmeli.")
+            return None, mode + "_forbidden"
+        print(mode, "basarisiz:", type(e).__name__, str(e)[:160])
+        return None, mode + "_failed"
     except Exception as e:
         print(mode, "basarisiz:", type(e).__name__, str(e)[:160])
         return None, mode + "_failed"
@@ -350,7 +365,7 @@ def supabase_post(path: str, data: Dict[str, Any]) -> None:
 
 def safe_patch_product(urun_id: Any, data: Dict[str, Any]) -> None:
     path = "/rest/v1/urunler?id=eq." + urllib.parse.quote(str(urun_id))
-    payload = dict(data)
+    payload = {k: v for k, v in data.items() if k not in MISSING_SUPABASE_COLUMNS}
     tried_payloads = []
 
     while payload:
@@ -360,18 +375,22 @@ def safe_patch_product(urun_id: Any, data: Dict[str, Any]) -> None:
             return
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")
-            print("PATCH alanlarla basarisiz:", e.code, body[:300])
 
             missing = re.search(r"Could not find the ['\"]([^'\"]+)['\"] column", body)
             if missing:
                 missing_col = missing.group(1)
+                MISSING_SUPABASE_COLUMNS.add(missing_col)
                 if missing_col in payload:
                     print("Supabase semasinda olmayan kolon atlandi:", missing_col)
                     payload.pop(missing_col, None)
                     continue
 
+            print("PATCH alanlarla basarisiz:", e.code, body[:300])
             # Eski/dar semalar için en güvenli minimum güncelleme.
-            minimal = {k: v for k, v in payload.items() if k in {"son_fiyat", "urun_adi", "guncelleme_istegi"}}
+            minimal = {
+                k: v for k, v in payload.items()
+                if k in {"son_fiyat", "urun_adi", "guncelleme_istegi"} and k not in MISSING_SUPABASE_COLUMNS
+            }
             if minimal and set(minimal.keys()) not in tried_payloads and minimal != payload:
                 payload = minimal
                 continue
