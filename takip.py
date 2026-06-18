@@ -548,6 +548,49 @@ def push_gonder(email: str, title: str, body: str, url: str) -> None:
             print("Push genel hatasi:", repr(e))
 
 
+def notification_event_key(urun_id: Any, event_type: str, value: Any) -> str:
+    numeric = parse_price(value)
+    suffix = f"{numeric:.2f}" if numeric is not None else str(value)
+    return f"{urun_id}:{event_type}:{suffix}"
+
+
+def should_send_notification(urun_id: Any, event_type: str, event_key: str) -> bool:
+    path = (
+        "/rest/v1/bildirim_loglari?select=id"
+        "&urun_id=eq." + urllib.parse.quote(str(urun_id)) +
+        "&event_type=eq." + urllib.parse.quote(str(event_type)) +
+        "&event_key=eq." + urllib.parse.quote(str(event_key)) +
+        "&limit=1"
+    )
+    try:
+        existing = supabase_get(path) or []
+        return len(existing) == 0
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        print("Bildirim log sorgusu basarisiz; spam riskini onlemek icin bildirim atlandi:", e.code, body[:240])
+        return False
+    except Exception as e:
+        print("Bildirim log sorgusu basarisiz; spam riskini onlemek icin bildirim atlandi:", e)
+        return False
+
+
+def log_notification(urun_id: Any, email: str, event_type: str, event_key: str, fiyat: str) -> None:
+    try:
+        supabase_post("/rest/v1/bildirim_loglari", {
+            "urun_id": urun_id,
+            "email": email,
+            "event_type": event_type,
+            "event_key": event_key,
+            "fiyat": fiyat,
+            "fiyat_num": parse_price(fiyat),
+        })
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        print("Bildirim logu yazilamadi:", e.code, body[:240])
+    except Exception as e:
+        print("Bildirim logu yazilamadi:", e)
+
+
 def kontrol_et(urun: Dict[str, Any]) -> None:
     urun_id = urun["id"]
     url = urun["url"]
@@ -604,12 +647,22 @@ def kontrol_et(urun: Dict[str, Any]) -> None:
     hedef_fiyat = parse_price(urun.get("hedef_fiyat"))
 
     if email and fiyat_dustu and urun.get("bildirim_dusus", False):
-        email_gonder(email, yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url)
-        push_gonder(email, "Fiyat düştü!", f"{yeni_adi or 'Ürün'}: {yeni_fiyat}", url)
+        event_key = notification_event_key(urun_id, "price_drop", yeni_sayi)
+        if should_send_notification(urun_id, "price_drop", event_key):
+            email_gonder(email, yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url)
+            push_gonder(email, "Fiyat düştü!", f"{yeni_adi or 'Ürün'}: {yeni_fiyat}", url)
+            log_notification(urun_id, email, "price_drop", event_key, yeni_fiyat)
+        else:
+            print("Fiyat dususu bildirimi daha once gonderilmis, atlandi:", event_key)
 
     if email and hedef_fiyat and yeni_sayi and yeni_sayi <= hedef_fiyat and urun.get("bildirim_hedef", True):
-        email_gonder(email, yeni_adi or "Ürün", eski_fiyat or "-", yeni_fiyat + " (hedef fiyata ulaşıldı)", url)
-        push_gonder(email, "Hedefe ulaştı!", f"{yeni_adi or 'Ürün'} hedef fiyata ulaştı: {yeni_fiyat}", url)
+        event_key = notification_event_key(urun_id, "target_reached", hedef_fiyat)
+        if should_send_notification(urun_id, "target_reached", event_key):
+            email_gonder(email, yeni_adi or "Ürün", eski_fiyat or "-", yeni_fiyat + " (hedef fiyata ulaşıldı)", url)
+            push_gonder(email, "Hedefe ulaştı!", f"{yeni_adi or 'Ürün'} hedef fiyata ulaştı: {yeni_fiyat}", url)
+            log_notification(urun_id, email, "target_reached", event_key, yeni_fiyat)
+        else:
+            print("Hedef bildirimi daha once gonderilmis, atlandi:", event_key)
 
 
 def main() -> None:

@@ -185,6 +185,60 @@ def test_extract_browser_fallback_url_from_trendyol_intent_redirect():
     assert extract_browser_fallback_url(intent) == "https://www.trendyol.com/genel-tedarik/kabartma-desenli-p-123456?merchantId=123"
 
 
+def test_notification_event_key_is_stable_and_price_specific():
+    from takip import notification_event_key
+
+    assert notification_event_key(12, "price_drop", 729.95) == "12:price_drop:729.95"
+    assert notification_event_key(12, "target_reached", 1000) == "12:target_reached:1000.00"
+
+
+def test_should_send_notification_false_when_log_exists():
+    import takip
+
+    calls = []
+    old_get = takip.supabase_get
+
+    def fake_get(path):
+        calls.append(path)
+        return [{"id": 1}]
+
+    takip.supabase_get = fake_get
+    try:
+        assert takip.should_send_notification(1, "price_drop", "1:price_drop:729.95") is False
+    finally:
+        takip.supabase_get = old_get
+
+    assert "bildirim_loglari" in calls[0]
+    assert "event_key=eq.1%3Aprice_drop%3A729.95" in calls[0]
+
+
+def test_should_send_notification_true_when_log_missing():
+    import takip
+
+    old_get = takip.supabase_get
+    takip.supabase_get = lambda path: []
+    try:
+        assert takip.should_send_notification(1, "price_drop", "1:price_drop:729.95") is True
+    finally:
+        takip.supabase_get = old_get
+
+
+def test_log_notification_writes_event_key():
+    import takip
+
+    calls = []
+    old_post = takip.supabase_post
+    takip.supabase_post = lambda path, data: calls.append((path, data))
+    try:
+        takip.log_notification(1, "u@example.com", "price_drop", "1:price_drop:729.95", "729,95 TL")
+    finally:
+        takip.supabase_post = old_post
+
+    assert calls[0][0] == "/rest/v1/bildirim_loglari"
+    assert calls[0][1]["event_key"] == "1:price_drop:729.95"
+    assert calls[0][1]["fiyat"] == "729,95 TL"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in globals().items() if k.startswith("test_") and callable(v)]
     for test in tests:
