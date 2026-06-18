@@ -38,6 +38,7 @@ FORCE_CHECK_ALL = os.environ.get("FORCE_CHECK_ALL", "false").lower() == "true"
 # aynı 400/403 hatalarını her ürün için tekrar tekrar üretmemek.
 MISSING_SUPABASE_COLUMNS = set()
 SCRAPERAPI_DISABLED = False
+TRENDYOL_API_DISABLED = False
 
 UA_DESKTOP = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -288,6 +289,11 @@ def extract_product_data(html: Optional[str]) -> Tuple[Optional[str], Optional[s
         r'"sellingPrice"\s*:\s*"?([\d.,]+)"?',
         r'"salePrice"\s*:\s*"?([\d.,]+)"?',
         r'"price"\s*:\s*"?([\d.,]+)"?',
+        r'"value"\s*:\s*"?([\d.,]+)"?\s*,\s*"currency"\s*:\s*"?(?:TRY|TL)"?',
+        r'"currency"\s*:\s*"?(?:TRY|TL)"?\s*,\s*"value"\s*:\s*"?([\d.,]+)"?',
+        r'"price"\s*:\s*\{[^{}]*(?:"text"\s*:\s*"[^"]*")?[^{}]*"value"\s*:\s*"?([\d.,]+)"?',
+        r'"priceValue"\s*:\s*"?([\d.,]+)"?',
+        r'"formattedPrice"\s*:\s*"([^"\\]+)"',
         r'property=["\']product:price:amount["\'][^>]+content=["\']([\d.,]+)["\']',
         r'itemprop=["\']price["\'][^>]+content=["\']([\d.,]+)["\']',
     ]
@@ -383,20 +389,23 @@ def extract_trendyol_api_product_data(payload: Any) -> Tuple[Optional[str], Opti
 
 
 def fetch_trendyol_api(url: str) -> Tuple[Optional[str], str]:
+    global TRENDYOL_API_DISABLED
+    if TRENDYOL_API_DISABLED:
+        return None, "trendyol_api_disabled_after_error"
     content_id = extract_trendyol_content_id(url)
     if not content_id:
         return None, "trendyol_api_no_content_id"
-    endpoints = [
-        f"https://www.trendyol.com/discovery-web-productgw-service/api/productDetail/{content_id}?storefrontId=1&culture=tr-TR",
-        f"https://apigw.trendyol.com/discovery-web-productgw-service/api/productDetail/{content_id}?storefrontId=1&culture=tr-TR",
-    ]
     headers = {
         "User-Agent": UA_MOBILE,
         "Accept": "application/json,text/plain,*/*",
-        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8",
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
         "Origin": "https://www.trendyol.com",
-        "Referer": "https://www.trendyol.com/",
+        "Referer": url,
     }
+    endpoints = [
+        f"https://public.trendyol.com/discovery-web-productgw-service/api/productDetail/{content_id}",
+        f"https://apigw.trendyol.com/discovery-web-productgw-service/api/productDetail/{content_id}",
+    ]
     for endpoint in endpoints:
         try:
             payload = http_json(endpoint, headers=headers)
@@ -408,6 +417,13 @@ def fetch_trendyol_api(url: str) -> Tuple[Optional[str], str]:
                     + '</script>'
                 )
                 return pseudo_html, "trendyol_api"
+        except urllib.error.HTTPError as e:
+            # 404/403/556 seri halde geliyorsa bu ücretsiz endpoint bu run için işe yaramıyor.
+            if e.code in {403, 404, 429, 556}:
+                TRENDYOL_API_DISABLED = True
+                print("Trendyol API", e.code, "dondurdu; bu run icin devre disi birakildi.")
+                return None, f"trendyol_api_http_{e.code}"
+            print("Trendyol API basarisiz:", type(e).__name__, str(e)[:160])
         except Exception as e:
             print("Trendyol API basarisiz:", type(e).__name__, str(e)[:160])
     return None, "trendyol_api_failed"

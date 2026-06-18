@@ -328,6 +328,15 @@ def test_extract_trendyol_embedded_json_price_and_name():
     assert name == "Kabarna Desenli Premium Elbise"
 
 
+def test_extract_trendyol_price_value_currency_pattern():
+    from takip import extract_product_data
+
+    html = '<script>{"price":{"value":1299.95,"currency":"TRY"},"name":"Currency Pattern Ürün"}</script>'
+    price, name = extract_product_data(html)
+    assert price == "1.299,95 TL"
+    assert name == "Currency Pattern Ürün"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in globals().items() if k.startswith("test_") and callable(v)]
     for test in tests:
