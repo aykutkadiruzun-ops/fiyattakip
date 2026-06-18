@@ -9,22 +9,24 @@ jobs:
   takip:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Python kur
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Bagımlılıkları kur
-        run: |
-          pip install playwright pywebpush requests playwright-stealth
-          playwright install chromium
-          playwright install-deps chromium
+      - name: Bagimliliklari kur
+        run: pip install -r requirements.txt
 
-      - name: Takip et
+      - name: Fiyatlari kontrol et
         env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SCRAPER_KEY: ${{ secrets.SCRAPER_KEY }}
           RESEND_KEY: ${{ secrets.RESEND_KEY }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          VAPID_EMAIL: ${{ secrets.VAPID_EMAIL }}
+          MAX_PRODUCTS_PER_RUN: '40'
+          PLAYWRIGHT_FALLBACK: 'false'
         run: python takip.py

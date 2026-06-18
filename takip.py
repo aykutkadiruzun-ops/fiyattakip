@@ -1,73 +1,174 @@
-from playwright.sync_api import sync_playwright
-import time
-import os
+import datetime as dt
+import html as html_lib
 import json
+import os
 import re
-import urllib.request
+import time
+import urllib.error
 import urllib.parse
+import urllib.request
+from typing import Any, Dict, Iterable, Optional, Tuple
+
 try:
-    from pywebpush import webpush, WebPushException
+    from pywebpush import WebPushException, webpush
     WEBPUSH_AVAILABLE = True
-    print("pywebpush yuklu, push aktif")
-except ImportError:
+except Exception:
     WEBPUSH_AVAILABLE = False
-    print("pywebpush yuklu degil, push bildirimleri devre disi")
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supabase.co")
+try:
+    from playwright.sync_api import sync_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except Exception:
+    PLAYWRIGHT_AVAILABLE = False
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uwxfrbljvmwtxecnqgrl.supabase.co").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-RESEND_KEY = os.environ.get("RESEND_KEY", "re_4Q6m5BmF_BibZvq3izfs193Huzhy2tj26")
-SCRAPER_KEY = os.environ.get("SCRAPER_KEY", "e69fb8c04518138c28881d88931b8e14")
-VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "dkt52zrQhGw_LKL-tcGCOzUoogHjReokrNWdTbY1k70")
-VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC", "BF9hdpEtHLXh-FwVuinhb6Mo0xUOt2PQqx2bn12GLNrz6FBPNeNqR9pFUMXC3__Aq6Q2oHgb5iNK1a2dX8HqFZ4")
-VAPID_EMAIL = "mailto:bildirim@rafta.net"
+RESEND_KEY = os.environ.get("RESEND_KEY", "")
+SCRAPER_KEY = os.environ.get("SCRAPER_KEY", "")
+VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "")
+VAPID_EMAIL = os.environ.get("VAPID_EMAIL", "mailto:bildirim@rafta.net")
+PROXY_SERVER = os.environ.get("PROXY_SERVER", "")
+PROXY_USERNAME = os.environ.get("PROXY_USERNAME", "")
+PROXY_PASSWORD = os.environ.get("PROXY_PASSWORD", "")
+PLAYWRIGHT_FALLBACK = os.environ.get("PLAYWRIGHT_FALLBACK", "false").lower() == "true"
+MAX_PRODUCTS_PER_RUN = int(os.environ.get("MAX_PRODUCTS_PER_RUN", "40"))
 
-def http_get(url, headers):
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req) as r:
-        return json.loads(r.read().decode("utf-8"))
+UA_DESKTOP = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+UA_MOBILE = (
+    "Mozilla/5.0 (Linux; Android 13; SM-G991B) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+)
 
-def http_post(url, headers, data):
-    payload = json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+
+def now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+
+
+def parse_price(raw: Any) -> Optional[float]:
+    if raw is None:
+        return None
+    text = str(raw)
+    text = html_lib.unescape(text)
+    text = text.replace("TL", "").replace("TRY", "").replace("₺", "")
+    text = re.sub(r"[^\d,.]", "", text).strip()
+    if not text:
+        return None
+    if "." in text and "," in text:
+        text = text.replace(".", "").replace(",", ".")
+    elif "," in text:
+        parts = text.split(",")
+        if len(parts[-1]) <= 2:
+            text = text.replace(",", ".")
+        else:
+            text = text.replace(",", "")
+    elif "." in text:
+        parts = text.split(".")
+        if len(parts[-1]) > 2:
+            text = text.replace(".", "")
     try:
-        with urllib.request.urlopen(req) as r:
-            return r.status
-    except Exception as e:
-        print("POST hatasi:", e)
-        return 0
+        value = float(text)
+    except ValueError:
+        return None
+    return value if value > 0 else None
 
-def http_patch(url, headers, data):
-    payload = json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(url, data=payload, headers=headers, method="PATCH")
-    try:
-        with urllib.request.urlopen(req) as r:
-            return r.status
-    except Exception as e:
-        print("PATCH hatasi:", e)
-        return 0
 
-def scraper_get(target_url, render_js=True):
+def format_price(value: float) -> str:
+    return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
+
+
+def normalize_url(url: str) -> str:
+    url = (url or "").strip()
+    if not url:
+        return url
+    parsed = urllib.parse.urlsplit(url)
+    keep_params = {
+        "merchantId", "boutiqueId", "colorId", "sizeId", "v1", "sku", "variant", "pid", "productId"
+    }
+    query = []
+    for k, v in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True):
+        lk = k.lower()
+        if lk.startswith("utm_") or lk in {"gclid", "fbclid", "yclid", "utm", "adjust_t", "adjust_campaign"}:
+            continue
+        if k in keep_params:
+            query.append((k, v))
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc.lower(), parsed.path, urllib.parse.urlencode(query), ""))
+
+
+def product_domain(url: str) -> str:
+    return urllib.parse.urlsplit(url).netloc.lower().replace("www.", "")
+
+
+def build_scraperapi_url(target_url: str, api_key: Optional[str] = None, render_js: bool = False, premium: bool = False) -> str:
+    key = api_key if api_key is not None else SCRAPER_KEY
     params = {
-        "api_key": SCRAPER_KEY,
+        "api_key": key,
         "url": target_url,
         "render": "true" if render_js else "false",
-        "premium": "true",
         "country_code": "tr",
     }
-    api_url = "http://api.scraperapi.com?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(api_url, headers={"User-Agent": "Mozilla/5.0"})
+    if premium:
+        params["premium"] = "true"
+    return "http://api.scraperapi.com?" + urllib.parse.urlencode(params)
+
+
+def http_json(url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+    payload = json.dumps(data).encode("utf-8") if data is not None else None
+    req = urllib.request.Request(url, data=payload, method=method, headers=headers or {})
     with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read().decode("utf-8")
+        body = r.read().decode("utf-8")
+        return json.loads(body) if body else None
 
-def trendyol_fiyat_ve_adi(url):
-    return trendyol_playwright(url)
 
-def trendyol_playwright(url):
+def http_text(url: str, timeout: int = 25) -> str:
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA_DESKTOP,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        raw = r.read()
+        enc = r.headers.get_content_charset() or "utf-8"
+        return raw.decode(enc, errors="ignore")
+
+
+def fetch_direct(url: str) -> Tuple[Optional[str], str]:
+    try:
+        return http_text(url, timeout=25), "direct"
+    except Exception as e:
+        print("Direkt fetch basarisiz:", type(e).__name__, str(e)[:160])
+        return None, "direct_failed"
+
+
+def fetch_scraperapi(url: str, render_js: bool = False, premium: bool = False) -> Tuple[Optional[str], str]:
+    if not SCRAPER_KEY:
+        return None, "scraperapi_missing_key"
+    mode = f"scraperapi_render_{render_js}_premium_{premium}"
+    try:
+        return http_text(build_scraperapi_url(url, render_js=render_js, premium=premium), timeout=75), mode
+    except Exception as e:
+        print(mode, "basarisiz:", type(e).__name__, str(e)[:160])
+        return None, mode + "_failed"
+
+
+def fetch_playwright(url: str) -> Tuple[Optional[str], str]:
+    if not (PLAYWRIGHT_AVAILABLE and PLAYWRIGHT_FALLBACK):
+        return None, "playwright_disabled"
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            launch_kwargs: Dict[str, Any] = {"headless": True}
+            if PROXY_SERVER:
+                proxy: Dict[str, str] = {"server": PROXY_SERVER}
+                if PROXY_USERNAME:
+                    proxy["username"] = PROXY_USERNAME
+                if PROXY_PASSWORD:
+                    proxy["password"] = PROXY_PASSWORD
+                launch_kwargs["proxy"] = proxy
+            browser = p.chromium.launch(**launch_kwargs)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
+                user_agent=UA_MOBILE,
                 viewport={"width": 390, "height": 844},
                 locale="tr-TR",
                 timezone_id="Europe/Istanbul",
@@ -75,218 +176,271 @@ def trendyol_playwright(url):
                 has_touch=True,
             )
             page = context.new_page()
-            if "ty.gl" in url:
-                try:
-                    req = urllib.request.Request(url, method='HEAD')
-                    with urllib.request.urlopen(req) as r:
-                        url = r.url
-                    print("Redirect sonrasi URL:", url)
-                except Exception as e:
-                    print("Redirect hatasi:", e)
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            time.sleep(20)
-
-            fiyat = None
-            for sel in [".prc-box-dscntd", ".prc-box-sllng", ".new-price", ".product-price-container", ".price-container"]:
-                try:
-                    el = page.locator(sel).first
-                    if el.count() > 0:
-                        text = el.inner_text().strip()
-                        if text and any(c.isdigit() for c in text):
-                            fiyat = text
-                            print("Fiyat bulundu:", fiyat)
-                            break
-                except:
-                    pass
-
-            if not fiyat:
-                try:
-                    content = page.content()
-                    print("Sayfa uzunlugu:", len(content))
-                    patterns = [
-                        r'"discountedPrice"\s*:\s*([\d.]+)',
-                        r'"sellingPrice"\s*:\s*([\d.]+)',
-                        r'"listPrice"\s*:\s*([\d.]+)',
-                        r'"originalPrice"\s*:\s*([\d.]+)',
-                        r'"price"\s*:\s*([\d.]+)',
-                    ]
-                    for pattern in patterns:
-                        m = re.search(pattern, content)
-                        if m:
-                            val = float(m.group(1).replace(',', '.'))
-                            if val > 1:
-                                fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-                                print("Fiyat JSON'dan bulundu:", fiyat)
-                                break
-                except Exception as e:
-                    print("JSON parse hatasi:", e)
-
-            urun_adi = None
-            try:
-                urun_adi = page.locator("h1").first.inner_text().strip()
-            except:
-                pass
-
+            page.wait_for_timeout(5000)
+            content = page.content()
             browser.close()
-            return fiyat, urun_adi
+            return content, "playwright_proxy" if PROXY_SERVER else "playwright_direct"
     except Exception as e:
-        print("Trendyol Playwright hatasi:", e)
+        print("Playwright basarisiz:", type(e).__name__, str(e)[:160])
+        return None, "playwright_failed"
+
+
+def iter_json_ld(html: str) -> Iterable[Any]:
+    for m in re.finditer(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, re.I | re.S):
+        raw = html_lib.unescape(re.sub(r"<!--|-->", "", m.group(1))).strip()
+        try:
+            yield json.loads(raw)
+        except Exception:
+            continue
+
+
+def walk_json(value: Any) -> Iterable[Dict[str, Any]]:
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from walk_json(child)
+    elif isinstance(value, list):
+        for item in value:
+            yield from walk_json(item)
+
+
+def extract_product_data(html: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    if not html:
         return None, None
 
-def genel_fiyat_ve_adi(url):
-    try:
-        content = scraper_get(url, render_js=True)
-        fiyat = None
+    name = None
+    price_value = None
 
-        def parse_fiyat(raw):
-            if '.' in raw and ',' in raw:
-                raw = raw.replace('.', '').replace(',', '.')
-            elif ',' in raw:
-                parts = raw.split(',')
-                if len(parts[-1]) <= 2:
-                    raw = raw.replace(',', '.')
-                else:
-                    raw = raw.replace(',', '')
-            elif '.' in raw and len(raw.split('.')[-1]) > 2:
-                raw = raw.replace('.', '')
-            try:
-                return float(raw)
-            except:
-                return None
+    for block in iter_json_ld(html):
+        for obj in walk_json(block):
+            obj_type = obj.get("@type") or obj.get("type")
+            if isinstance(obj_type, list):
+                is_product = any(str(x).lower() == "product" for x in obj_type)
+            else:
+                is_product = str(obj_type).lower() == "product"
+            if is_product:
+                name = name or obj.get("name")
+                offers = obj.get("offers")
+                offers_list = offers if isinstance(offers, list) else [offers]
+                for offer in offers_list:
+                    if isinstance(offer, dict):
+                        price_value = parse_price(offer.get("price") or offer.get("lowPrice") or offer.get("highPrice"))
+                        if price_value:
+                            return format_price(price_value), clean_name(name)
 
-        m = re.search(r'"price"\s*:\s*"?([\d.,]+)"?', content)
+    patterns = [
+        r'"discountedPrice"\s*:\s*"?([\d.,]+)"?',
+        r'"sellingPrice"\s*:\s*"?([\d.,]+)"?',
+        r'"salePrice"\s*:\s*"?([\d.,]+)"?',
+        r'"price"\s*:\s*"?([\d.,]+)"?',
+        r'property=["\']product:price:amount["\'][^>]+content=["\']([\d.,]+)["\']',
+        r'itemprop=["\']price["\'][^>]+content=["\']([\d.,]+)["\']',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, html, re.I)
         if m:
-            val = parse_fiyat(m.group(1))
-            if val and val > 1:
-                fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-
-        if not fiyat:
-            matches = re.findall(r'(\d{1,3}(?:\.\d{3})+,\d{2})\s*(?:TL|₺)', content)
-            if matches:
-                val = parse_fiyat(matches[0])
-                if val and val > 1:
-                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-
-        if not fiyat:
-            matches = re.findall(r'(\d{3,6},\d{2})\s*(?:TL|₺)', content)
-            if matches:
-                val = parse_fiyat(matches[0])
-                if val and val > 1:
-                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-
-        if not fiyat:
-            matches = re.findall(r'(\d{2,6})\s*(?:TL|₺)', content)
-            if matches:
-                val = float(matches[0])
-                if val > 1:
-                    fiyat = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
-
-        urun_adi = None
-        for pattern in [r'<h1[^>]*class="[^"]*product[^"]*"[^>]*>([^<]+)</h1>',
-                        r'"name"\s*:\s*"([^"]{5,100})"',
-                        r'<h1[^>]*>([^<]{5,100})</h1>',
-                        r'<title>([^|<-]{5,80})']:
-            m2 = re.search(pattern, content)
-            if m2:
-                urun_adi = m2.group(1).strip()
+            price_value = parse_price(m.group(1))
+            if price_value:
                 break
 
-        return fiyat, urun_adi
-    except Exception as e:
-        print("Genel scraper hatasi:", e)
-        return None, None
+    if not price_value:
+        for pattern in [
+            r'(\d{1,3}(?:\.\d{3})+,\d{2})\s*(?:TL|₺)',
+            r'(\d{3,7},\d{2})\s*(?:TL|₺)',
+            r'(?:TL|₺)\s*(\d{1,3}(?:\.\d{3})*,\d{2})',
+        ]:
+            matches = re.findall(pattern, html, re.I)
+            for candidate in matches[:10]:
+                value = parse_price(candidate)
+                if value and value > 1:
+                    price_value = value
+                    break
+            if price_value:
+                break
 
-def urunleri_getir():
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY
-    }
-    return http_get(SUPABASE_URL + "/rest/v1/urunler?select=*", headers)
+    if not name:
+        for pattern in [
+            r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']{3,180})["\']',
+            r'<h1[^>]*>(.*?)</h1>',
+            r'<title>(.*?)</title>',
+            r'"name"\s*:\s*"([^"\\]{5,180})"',
+        ]:
+            m = re.search(pattern, html, re.I | re.S)
+            if m:
+                name = re.sub(r"<[^>]+>", " ", m.group(1))
+                break
 
-def fiyat_guncelle(urun_id, yeni_fiyat, urun_adi):
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY,
-        "Content-Type": "application/json"
-    }
-    data = {"son_fiyat": yeni_fiyat}
-    if urun_adi:
-        data["urun_adi"] = urun_adi
-    http_patch(
-        SUPABASE_URL + "/rest/v1/urunler?id=eq." + str(urun_id),
-        headers,
-        data
-    )
+    return (format_price(price_value) if price_value else None), clean_name(name)
 
-def gecmise_kaydet(urun_id, fiyat):
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY,
-        "Content-Type": "application/json"
-    }
-    http_post(
-        SUPABASE_URL + "/rest/v1/fiyat_gecmisi",
-        headers,
-        {"urun_id": urun_id, "fiyat": fiyat}
-    )
 
-def push_subscriptions_getir(email):
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY
-    }
+def clean_name(name: Any) -> Optional[str]:
+    if not name:
+        return None
+    text = html_lib.unescape(str(name))
+    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s*[|—-]\s*(Trendyol|Hepsiburada|Amazon|Bershka|Zara|Rafta).*$", "", text, flags=re.I)
+    return text[:180] if text else None
+
+
+def resolve_short_url(url: str) -> str:
+    if "ty.gl" not in url:
+        return url
     try:
-        result = http_get(
-            SUPABASE_URL + "/rest/v1/push_subscriptions?email=eq." + urllib.parse.quote(email) + "&select=subscription",
-            headers
-        )
-        print("Subscription sorgu sonucu:", result)
-        return result
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": UA_MOBILE})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.url
     except Exception as e:
-        print("Subscription getirme hatasi:", e)
+        print("Kisa URL cozulemedi:", e)
+        return url
+
+
+def fetch_product_data(url: str) -> Tuple[Optional[str], Optional[str], str]:
+    url = normalize_url(resolve_short_url(url))
+    domain = product_domain(url)
+    attempts = []
+
+    # 1) En ucuz: direkt HTML. Birçok site JSON-LD/metadan fiyat verir.
+    attempts.append(fetch_direct(url))
+
+    # 2) Ucuz proxy: JS render yok, premium yok.
+    attempts.append(fetch_scraperapi(url, render_js=False, premium=False))
+
+    # 3) Daha pahalı: premium proxy ama JS render hâlâ yok.
+    if any(x in domain for x in ["trendyol.com", "amazon.", "zara.com", "bershka.com"]):
+        attempts.append(fetch_scraperapi(url, render_js=False, premium=True))
+
+    # 4) En pahalı ScraperAPI: render.
+    attempts.append(fetch_scraperapi(url, render_js=True, premium=True))
+
+    # 5) Son çare: Playwright. Varsayılan kapalı; PLAYWRIGHT_FALLBACK=true gerekir.
+    attempts.append(fetch_playwright(url))
+
+    last_mode = "none"
+    for html, mode in attempts:
+        last_mode = mode
+        price, name = extract_product_data(html)
+        print("Deneme:", mode, "price=", price, "name=", name)
+        if price:
+            return price, name, mode
+    return None, None, last_mode
+
+
+def supabase_headers(content_type: bool = False) -> Dict[str, str]:
+    if not SUPABASE_KEY:
+        raise RuntimeError("SUPABASE_KEY environment variable eksik")
+    headers = {"apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY}
+    if content_type:
+        headers["Content-Type"] = "application/json"
+        headers["Prefer"] = "return=minimal"
+    return headers
+
+
+def supabase_get(path: str) -> Any:
+    return http_json(SUPABASE_URL + path, headers=supabase_headers())
+
+
+def supabase_patch(path: str, data: Dict[str, Any]) -> None:
+    http_json(SUPABASE_URL + path, method="PATCH", data=data, headers=supabase_headers(True))
+
+
+def supabase_post(path: str, data: Dict[str, Any]) -> None:
+    http_json(SUPABASE_URL + path, method="POST", data=data, headers=supabase_headers(True))
+
+
+def safe_patch_product(urun_id: Any, data: Dict[str, Any]) -> None:
+    try:
+        supabase_patch("/rest/v1/urunler?id=eq." + urllib.parse.quote(str(urun_id)), data)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        print("PATCH detay alanlarla basarisiz:", e.code, body[:300])
+        minimal = {k: v for k, v in data.items() if k in {"son_fiyat", "urun_adi", "guncelleme_istegi"}}
+        if minimal and minimal != data:
+            supabase_patch("/rest/v1/urunler?id=eq." + urllib.parse.quote(str(urun_id)), minimal)
+        else:
+            raise
+
+
+def should_skip_product(urun: Dict[str, Any]) -> bool:
+    if urun.get("guncelleme_istegi"):
+        return False
+    hata_sayisi = int(urun.get("hata_sayisi") or 0)
+    if hata_sayisi <= 0:
+        return False
+    son = urun.get("son_kontrol") or urun.get("updated_at")
+    if not son:
+        return False
+    try:
+        son_dt = dt.datetime.fromisoformat(str(son).replace("Z", "+00:00"))
+    except Exception:
+        return False
+    if son_dt.tzinfo is None:
+        son_dt = son_dt.replace(tzinfo=dt.timezone.utc)
+    wait_hours = min(24, 6 * hata_sayisi)
+    return dt.datetime.now(dt.timezone.utc) < son_dt + dt.timedelta(hours=wait_hours)
+
+
+def urunleri_getir() -> list:
+    params = "select=*&satin_alindi=is.false&order=guncelleme_istegi.desc,id.desc&limit=" + str(MAX_PRODUCTS_PER_RUN)
+    try:
+        return supabase_get("/rest/v1/urunler?" + params) or []
+    except urllib.error.HTTPError:
+        # Eski şemada satin_alindi yoksa tüm ürünleri çek.
+        return supabase_get("/rest/v1/urunler?select=*&order=id.desc&limit=" + str(MAX_PRODUCTS_PER_RUN)) or []
+
+
+def gecmise_kaydet(urun_id: Any, fiyat: str) -> None:
+    try:
+        supabase_post("/rest/v1/fiyat_gecmisi", {"urun_id": urun_id, "fiyat": fiyat})
+    except Exception as e:
+        print("Fiyat gecmisi yazilamadi:", e)
+
+
+def email_gonder(email: str, urun_adi: str, eski_fiyat: Any, yeni_fiyat: str, url: str) -> None:
+    if not RESEND_KEY:
+        print("RESEND_KEY yok; email atlandi")
+        return
+    safe_name = html_lib.escape(urun_adi or "Ürün")
+    safe_url = html_lib.escape(url)
+    html_body = (
+        f"<h2>Fiyat düştü!</h2><p><b>{safe_name}</b> fiyatı değişti.</p>"
+        f"<p>Eski fiyat: <s>{html_lib.escape(str(eski_fiyat or '-'))}</s></p>"
+        f"<p>Yeni fiyat: <b style='color:green'>{html_lib.escape(str(yeni_fiyat))}</b></p>"
+        f"<a href='{safe_url}' style='background:#111;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Ürüne Git</a>"
+    )
+    data = {"from": "bildirim@rafta.net", "to": email, "subject": "Fiyat düştü: " + (urun_adi or "Ürün"), "html": html_body}
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=json.dumps(data).encode("utf-8"),
+        method="POST",
+        headers={"Authorization": "Bearer " + RESEND_KEY, "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            print("Email durumu:", r.status)
+    except Exception as e:
+        print("Email hatasi:", e)
+
+
+def push_subscriptions_getir(email: str) -> list:
+    try:
+        return supabase_get("/rest/v1/push_subscriptions?email=eq." + urllib.parse.quote(email) + "&select=subscription") or []
+    except Exception as e:
+        print("Push subscription okunamadi:", e)
         return []
 
-def email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url):
-    try:
-        headers = {
-            "Authorization": "Bearer " + RESEND_KEY,
-            "Content-Type": "application/json"
-        }
-        html = (
-            "<h2>Fiyat Dustu!</h2>"
-            "<p><b>" + (urun_adi or "Urun") + "</b> fiyati degisti!</p>"
-            "<p>Eski fiyat: <s>" + str(eski_fiyat) + "</s></p>"
-            "<p>Yeni fiyat: <b style='color:green'>" + str(yeni_fiyat) + "</b></p>"
-            "<a href='" + url + "' style='background:#111;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Urune Git</a>"
-        )
-        data = {
-            "from": "bildirim@rafta.net",
-            "to": email,
-            "subject": "Fiyat dustu: " + (urun_adi or "Urun"),
-            "html": html
-        }
-        status = http_post("https://api.resend.com/emails", headers, data)
-        print("Email durumu:", status)
-    except Exception as e:
-        print("Email hatasi (devam ediliyor):", e)
 
-def push_gonder(email, title, body, url):
-    if not WEBPUSH_AVAILABLE:
-        print("pywebpush yuklu degil")
+def push_gonder(email: str, title: str, body: str, url: str) -> None:
+    if not (WEBPUSH_AVAILABLE and VAPID_PRIVATE):
+        print("Push atlandi: pywebpush veya VAPID_PRIVATE eksik")
         return
-    print("Push deneniyor:", email)
-    subscriptions = push_subscriptions_getir(email)
-    print("Subscription sayisi:", len(subscriptions))
-    if not subscriptions:
-        print("Push subscription bulunamadi:", email)
-        return
-    for sub in subscriptions:
+    for sub in push_subscriptions_getir(email):
         try:
             webpush(
                 subscription_info=sub["subscription"],
                 data=json.dumps({"title": title, "body": body, "url": url}),
                 vapid_private_key=VAPID_PRIVATE,
-                vapid_claims={"sub": VAPID_EMAIL}
+                vapid_claims={"sub": VAPID_EMAIL},
             )
             print("Push gonderildi:", email)
         except WebPushException as e:
@@ -294,82 +448,67 @@ def push_gonder(email, title, body, url):
         except Exception as e:
             print("Push genel hatasi:", repr(e))
 
-def kontrol_et(urun):
+
+def kontrol_et(urun: Dict[str, Any]) -> None:
     urun_id = urun["id"]
     url = urun["url"]
-    email = urun["email"]
+    email = urun.get("email")
     eski_fiyat = urun.get("son_fiyat")
     urun_adi = urun.get("urun_adi")
 
-    print("Kontrol ediliyor:", url)
+    if should_skip_product(urun):
+        print("Backoff nedeniyle atlandi:", urun_id, url)
+        return
 
-    yeni_fiyat = None
-    yeni_adi = None
-
-    if "trendyol.com" in url or "ty.gl" in url:
-        yeni_fiyat, yeni_adi = trendyol_fiyat_ve_adi(url)
-    else:
-        yeni_fiyat, yeni_adi = genel_fiyat_ve_adi(url)
-
-    if yeni_adi:
-        urun_adi = yeni_adi
+    print("Kontrol ediliyor:", urun_id, url)
+    yeni_fiyat, yeni_adi, mode = fetch_product_data(url)
+    update_base = {"son_kontrol": now_iso(), "scrape_yontemi": mode}
 
     if not yeni_fiyat:
+        hata_sayisi = int(urun.get("hata_sayisi") or 0) + 1
+        safe_patch_product(urun_id, {**update_base, "hata_sayisi": hata_sayisi, "son_hata": "Fiyat çekilemedi", "guncelleme_istegi": False})
         print("Fiyat cekilemedi:", url)
         return
 
-    print("Eski:", eski_fiyat, "-> Yeni:", yeni_fiyat)
+    yeni_adi = yeni_adi or urun_adi
+    update_data = {**update_base, "son_fiyat": yeni_fiyat, "hata_sayisi": 0, "son_hata": None, "guncelleme_istegi": False}
+    if yeni_adi:
+        update_data["urun_adi"] = yeni_adi
+    if not urun.get("ilk_fiyat"):
+        update_data["ilk_fiyat"] = yeni_fiyat
 
     gecmise_kaydet(urun_id, yeni_fiyat)
-    fiyat_guncelle(urun_id, yeni_fiyat, urun_adi)
+    safe_patch_product(urun_id, update_data)
+    print("Guncellendi:", eski_fiyat, "->", yeni_fiyat, "mode=", mode)
 
-    bildirim_dusus = urun.get("bildirim_dusus", False)
-    bildirim_hedef = urun.get("bildirim_hedef", True)
+    eski_sayi = parse_price(eski_fiyat)
+    yeni_sayi = parse_price(yeni_fiyat)
+    fiyat_dustu = eski_sayi is not None and yeni_sayi is not None and yeni_sayi < eski_sayi
+    hedef_fiyat = parse_price(urun.get("hedef_fiyat"))
 
-    fiyat_dustu = eski_fiyat and eski_fiyat != yeni_fiyat
+    if email and fiyat_dustu and urun.get("bildirim_dusus", False):
+        email_gonder(email, yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url)
+        push_gonder(email, "Fiyat düştü!", f"{yeni_adi or 'Ürün'}: {yeni_fiyat}", url)
 
-    if fiyat_dustu:
-        print("Fiyat degisti!")
-        if bildirim_dusus:
-            print("Her dusus bildirimi aktif, bildirim gonderiliyor...")
-            email_gonder(email, urun_adi, eski_fiyat, yeni_fiyat, url)
-            push_gonder(email, "Fiyat dustu!", f"{urun_adi or 'Urun'}: {yeni_fiyat}", url)
-    else:
-        print("Fiyat degismedi.")
+    if email and hedef_fiyat and yeni_sayi and yeni_sayi <= hedef_fiyat and urun.get("bildirim_hedef", True):
+        email_gonder(email, yeni_adi or "Ürün", eski_fiyat or "-", yeni_fiyat + " (hedef fiyata ulaşıldı)", url)
+        push_gonder(email, "Hedefe ulaştı!", f"{yeni_adi or 'Ürün'} hedef fiyata ulaştı: {yeni_fiyat}", url)
 
-    hedef_fiyat = urun.get("hedef_fiyat")
-    if hedef_fiyat and bildirim_hedef:
+
+def main() -> None:
+    urunler = urunleri_getir()
+    print(f"{len(urunler)} urun bulundu.")
+    for urun in urunler:
         try:
-            yeni_sayi = float(re.sub(r'[^\d,]', '', yeni_fiyat).replace(',', '.'))
-            if yeni_sayi <= float(hedef_fiyat):
-                print("Hedef fiyata ulasildi! Bildirim gonderiliyor...")
-                email_gonder(email, urun_adi, eski_fiyat or "-", yeni_fiyat + " (HEDEF FIYATA ULASILDI!)", url)
-                push_gonder(email, "Hedefe ulasti!", f"{urun_adi or 'Urun'} hedef fiyata ulasti: {yeni_fiyat}", url)
+            kontrol_et(urun)
         except Exception as e:
-            print("Hedef fiyat kontrolu hatasi:", e)
+            print("Urun hatasi:", urun.get("id"), urun.get("url"), type(e).__name__, e)
+            try:
+                safe_patch_product(urun.get("id"), {"son_kontrol": now_iso(), "son_hata": str(e)[:240], "hata_sayisi": int(urun.get("hata_sayisi") or 0) + 1, "guncelleme_istegi": False})
+            except Exception as patch_e:
+                print("Hata bilgisi yazilamadi:", patch_e)
+        time.sleep(1)
 
-urunler = urunleri_getir()
-print(f"{len(urunler)} urun bulundu.")
 
-istekli = [u for u in urunler if u.get("guncelleme_istegi")]
-diger   = [u for u in urunler if not u.get("guncelleme_istegi")]
-
-if istekli:
-    print(f"{len(istekli)} urun icin manuel guncelleme istegi var.")
-
-for urun in istekli + diger:
-    try:
-        kontrol_et(urun)
-        if urun.get("guncelleme_istegi"):
-            headers = {
-                "apikey": SUPABASE_KEY,
-                "Authorization": "Bearer " + SUPABASE_KEY,
-                "Content-Type": "application/json"
-            }
-            http_patch(
-                SUPABASE_URL + "/rest/v1/urunler?id=eq." + str(urun["id"]),
-                headers,
-                {"guncelleme_istegi": False}
-            )
-    except Exception as e:
-        print("Hata:", urun.get("url"), "-", e)
+if __name__ == "__main__":
+    main()

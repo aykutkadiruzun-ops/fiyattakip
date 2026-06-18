@@ -3,5 +3,5 @@ services:
     name: fiyattakip
     runtime: python
     schedule: "0 */6 * * *"
-    buildCommand: pip install -r requirements.txt && playwright install chromium
+    buildCommand: pip install -r requirements.txt
     startCommand: python takip.py
