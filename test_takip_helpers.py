@@ -16,9 +16,9 @@ def test_parse_price_tr_formats():
 
 def test_should_use_expensive_fetch_respects_backoff():
     from takip import should_skip_product
-    assert should_skip_product({"hata_sayisi": 0, "son_kontrol": None}) is False
-    assert should_skip_product({"hata_sayisi": 3, "son_kontrol": "2099-01-01T00:00:00"}) is True
-    assert should_skip_product({"guncelleme_istegi": True, "hata_sayisi": 9, "son_kontrol": "2099-01-01T00:00:00"}) is False
+    assert should_skip_product({"hata_sayisi": 0, "sonraki_kontrol": None}) is False
+    assert should_skip_product({"hata_sayisi": 3, "sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is True
+    assert should_skip_product({"guncelleme_istegi": True, "hata_sayisi": 9, "sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is False
 
 
 def test_build_scraperapi_url_defaults_are_cheap():
@@ -142,6 +142,36 @@ def test_scraperapi_403_disables_more_scraper_calls():
         takip.SCRAPER_KEY = old_key
 
     assert len(calls) == 1
+
+
+def test_next_check_hours_success_and_failure_backoff():
+    from takip import next_check_iso
+
+    success = next_check_iso(success=True, hata_sayisi=0, now="2026-01-01T00:00:00+00:00")
+    first_fail = next_check_iso(success=False, hata_sayisi=1, now="2026-01-01T00:00:00+00:00")
+    many_fail = next_check_iso(success=False, hata_sayisi=5, now="2026-01-01T00:00:00+00:00")
+
+    assert success == "2026-01-01T06:00:00+00:00"
+    assert first_fail == "2026-01-01T06:00:00+00:00"
+    assert many_fail == "2026-01-04T00:00:00+00:00"
+
+
+def test_should_skip_product_respects_next_check_and_purchased():
+    from takip import should_skip_product
+
+    assert should_skip_product({"satin_alindi": True, "guncelleme_istegi": True}) is True
+    assert should_skip_product({"sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is True
+    assert should_skip_product({"guncelleme_istegi": True, "sonraki_kontrol": "2099-01-01T00:00:00+00:00"}) is False
+
+
+def test_due_products_query_filters_by_next_check():
+    from takip import build_due_products_path
+
+    path = build_due_products_path(now="2026-01-01T00:00:00+00:00", limit=25)
+    assert "satin_alindi=is.false" in path
+    assert "guncelleme_istegi.is.true" in path
+    assert "sonraki_kontrol.lte.2026-01-01T00%3A00%3A00%2B00%3A00" in path
+    assert "limit=25" in path
 
 
 if __name__ == "__main__":

@@ -48,8 +48,32 @@ UA_MOBILE = (
 )
 
 
+def parse_datetime(value: Any) -> Optional[dt.datetime]:
+    if not value:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed
+
+
 def now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+
+
+def next_check_iso(success: bool, hata_sayisi: int = 0, now: Optional[str] = None) -> str:
+    base = parse_datetime(now) if now else dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    if base is None:
+        base = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    if success:
+        hours = 6
+    else:
+        # 1. hata: 6 saat, 2. hata: 12 saat, 3. hata: 24 saat, 4+: en fazla 72 saat.
+        hours = min(72, 6 * (2 ** max(0, int(hata_sayisi or 1) - 1)))
+    return (base + dt.timedelta(hours=hours)).replace(microsecond=0).isoformat()
 
 
 def parse_price(raw: Any) -> Optional[float]:
@@ -400,36 +424,50 @@ def safe_patch_product(urun_id: Any, data: Dict[str, Any]) -> None:
 
 
 def should_skip_product(urun: Dict[str, Any]) -> bool:
+    # Kullanıcı satın aldı/rafıma aldı olarak işaretlediyse fiyat takibi durur.
+    if urun.get("satin_alindi") is True:
+        return True
+    # Manuel güncelleme isteği varsa zamanı bekleme.
     if urun.get("guncelleme_istegi"):
         return False
-    hata_sayisi = int(urun.get("hata_sayisi") or 0)
-    if hata_sayisi <= 0:
-        return False
-    son = urun.get("son_kontrol") or urun.get("updated_at")
-    if not son:
-        return False
-    try:
-        son_dt = dt.datetime.fromisoformat(str(son).replace("Z", "+00:00"))
-    except Exception:
-        return False
-    if son_dt.tzinfo is None:
-        son_dt = son_dt.replace(tzinfo=dt.timezone.utc)
-    wait_hours = min(24, 6 * hata_sayisi)
-    return dt.datetime.now(dt.timezone.utc) < son_dt + dt.timedelta(hours=wait_hours)
+    next_check = parse_datetime(urun.get("sonraki_kontrol"))
+    if next_check and dt.datetime.now(dt.timezone.utc) < next_check:
+        return True
+    return False
+
+
+def build_due_products_path(now: Optional[str] = None, limit: Optional[int] = None) -> str:
+    now_value = now or now_iso()
+    lim = limit if limit is not None else MAX_PRODUCTS_PER_RUN
+    or_filter = urllib.parse.quote(
+        f"(guncelleme_istegi.is.true,sonraki_kontrol.is.null,sonraki_kontrol.lte.{now_value})",
+        safe="(),."
+    )
+    return (
+        "/rest/v1/urunler?select=*"
+        "&satin_alindi=is.false"
+        f"&or={or_filter}"
+        "&order=guncelleme_istegi.desc,sonraki_kontrol.asc,id.asc"
+        f"&limit={lim}"
+    )
 
 
 def urunleri_getir() -> list:
-    params = "select=*&satin_alindi=is.false&order=guncelleme_istegi.desc,id.desc&limit=" + str(MAX_PRODUCTS_PER_RUN)
     try:
-        return supabase_get("/rest/v1/urunler?" + params) or []
-    except urllib.error.HTTPError:
-        # Eski şemada satin_alindi yoksa tüm ürünleri çek.
-        return supabase_get("/rest/v1/urunler?select=*&order=id.desc&limit=" + str(MAX_PRODUCTS_PER_RUN)) or []
+        return supabase_get(build_due_products_path()) or []
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        print("Zamani gelen urun sorgusu basarisiz, eski sorguya dusuluyor:", e.code, body[:240])
+        # Eski şemada yeni kolonlar yoksa tüm aktif ürünleri çek.
+        try:
+            return supabase_get("/rest/v1/urunler?select=*&satin_alindi=is.false&order=id.desc&limit=" + str(MAX_PRODUCTS_PER_RUN)) or []
+        except urllib.error.HTTPError:
+            return supabase_get("/rest/v1/urunler?select=*&order=id.desc&limit=" + str(MAX_PRODUCTS_PER_RUN)) or []
 
 
 def gecmise_kaydet(urun_id: Any, fiyat: str) -> None:
     try:
-        supabase_post("/rest/v1/fiyat_gecmisi", {"urun_id": urun_id, "fiyat": fiyat})
+        supabase_post("/rest/v1/fiyat_gecmisi", {"urun_id": urun_id, "fiyat": fiyat, "fiyat_num": parse_price(fiyat)})
     except Exception as e:
         print("Fiyat gecmisi yazilamadi:", e)
 
@@ -495,32 +533,50 @@ def kontrol_et(urun: Dict[str, Any]) -> None:
     urun_adi = urun.get("urun_adi")
 
     if should_skip_product(urun):
-        print("Backoff nedeniyle atlandi:", urun_id, url)
+        print("Kontrol zamani gelmedi veya satin alinmis, atlandi:", urun_id, url)
         return
 
     print("Kontrol ediliyor:", urun_id, url)
+    run_now = now_iso()
     yeni_fiyat, yeni_adi, mode = fetch_product_data(url)
-    update_base = {"son_kontrol": now_iso(), "scrape_yontemi": mode}
+    update_base = {"son_kontrol": run_now, "scrape_yontemi": mode}
 
     if not yeni_fiyat:
         hata_sayisi = int(urun.get("hata_sayisi") or 0) + 1
-        safe_patch_product(urun_id, {**update_base, "hata_sayisi": hata_sayisi, "son_hata": "Fiyat çekilemedi", "guncelleme_istegi": False})
+        safe_patch_product(urun_id, {
+            **update_base,
+            "hata_sayisi": hata_sayisi,
+            "son_hata": "Fiyat çekilemedi",
+            "sonraki_kontrol": next_check_iso(False, hata_sayisi, run_now),
+            "guncelleme_istegi": False,
+        })
         print("Fiyat cekilemedi:", url)
         return
 
     yeni_adi = yeni_adi or urun_adi
-    update_data = {**update_base, "son_fiyat": yeni_fiyat, "hata_sayisi": 0, "son_hata": None, "guncelleme_istegi": False}
+    yeni_sayi = parse_price(yeni_fiyat)
+    update_data = {
+        **update_base,
+        "son_fiyat": yeni_fiyat,
+        "son_fiyat_num": yeni_sayi,
+        "son_basarili_kontrol": run_now,
+        "sonraki_kontrol": next_check_iso(True, 0, run_now),
+        "hata_sayisi": 0,
+        "son_hata": None,
+        "guncelleme_istegi": False,
+    }
     if yeni_adi:
         update_data["urun_adi"] = yeni_adi
     if not urun.get("ilk_fiyat"):
         update_data["ilk_fiyat"] = yeni_fiyat
+    if not urun.get("ilk_fiyat_num") and yeni_sayi is not None:
+        update_data["ilk_fiyat_num"] = yeni_sayi
 
     gecmise_kaydet(urun_id, yeni_fiyat)
     safe_patch_product(urun_id, update_data)
     print("Guncellendi:", eski_fiyat, "->", yeni_fiyat, "mode=", mode)
 
     eski_sayi = parse_price(eski_fiyat)
-    yeni_sayi = parse_price(yeni_fiyat)
     fiyat_dustu = eski_sayi is not None and yeni_sayi is not None and yeni_sayi < eski_sayi
     hedef_fiyat = parse_price(urun.get("hedef_fiyat"))
 
@@ -542,7 +598,15 @@ def main() -> None:
         except Exception as e:
             print("Urun hatasi:", urun.get("id"), urun.get("url"), type(e).__name__, e)
             try:
-                safe_patch_product(urun.get("id"), {"son_kontrol": now_iso(), "son_hata": str(e)[:240], "hata_sayisi": int(urun.get("hata_sayisi") or 0) + 1, "guncelleme_istegi": False})
+                err_now = now_iso()
+                err_count = int(urun.get("hata_sayisi") or 0) + 1
+                safe_patch_product(urun.get("id"), {
+                    "son_kontrol": err_now,
+                    "son_hata": str(e)[:240],
+                    "hata_sayisi": err_count,
+                    "sonraki_kontrol": next_check_iso(False, err_count, err_now),
+                    "guncelleme_istegi": False,
+                })
             except Exception as patch_e:
                 print("Hata bilgisi yazilamadi:", patch_e)
         time.sleep(1)

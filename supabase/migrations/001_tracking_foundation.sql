@@ -1,106 +1,56 @@
--- Rafta scalable price tracking foundation
--- Safe/idempotent migration for Supabase PostgreSQL.
+-- Rafta fiyat takip sistemi için ölçeklenebilir takip kolonları
+-- Supabase SQL Editor içine yapıştırıp Run butonuna basabilirsin.
+-- Güvenlidir: IF NOT EXISTS kullanır, mevcut kolonları bozmaz.
 
--- 1) Product tracking runtime columns
-alter table if exists public.urunler
-  add column if not exists son_kontrol timestamptz,
-  add column if not exists sonraki_kontrol timestamptz,
-  add column if not exists son_basarili_kontrol timestamptz,
-  add column if not exists hata_sayisi integer not null default 0,
-  add column if not exists son_hata text,
-  add column if not exists scrape_yontemi text,
-  add column if not exists son_fiyat_num numeric(12,2),
-  add column if not exists ilk_fiyat_num numeric(12,2),
-  add column if not exists son_bildirim_fiyat_num numeric(12,2),
-  add column if not exists son_bildirim_at timestamptz;
+-- 1) urunler tablosuna takip / hata / maliyet kontrol kolonları
+ALTER TABLE public.urunler
+  ADD COLUMN IF NOT EXISTS son_kontrol timestamptz,
+  ADD COLUMN IF NOT EXISTS sonraki_kontrol timestamptz,
+  ADD COLUMN IF NOT EXISTS son_basarili_kontrol timestamptz,
+  ADD COLUMN IF NOT EXISTS hata_sayisi integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS son_hata text,
+  ADD COLUMN IF NOT EXISTS scrape_yontemi text,
+  ADD COLUMN IF NOT EXISTS son_fiyat_num numeric,
+  ADD COLUMN IF NOT EXISTS ilk_fiyat_num numeric;
 
--- 2) Price history numeric column for reliable comparisons/charts
-alter table if exists public.fiyat_gecmisi
-  add column if not exists fiyat_num numeric(12,2),
-  add column if not exists scrape_yontemi text;
+-- 2) fiyat_gecmisi tablosuna numeric fiyat kolonu
+ALTER TABLE public.fiyat_gecmisi
+  ADD COLUMN IF NOT EXISTS fiyat_num numeric;
 
--- 3) Notification log: prevents duplicate notifications for the same event
-create table if not exists public.bildirim_loglari (
-  id bigserial primary key,
-  urun_id bigint not null,
+-- 3) Aynı fiyat düşüşü için tekrar tekrar bildirim gitmesini önlemek için log tablosu
+CREATE TABLE IF NOT EXISTS public.bildirim_loglari (
+  id bigserial PRIMARY KEY,
+  urun_id bigint NOT NULL,
   email text,
-  bildirim_tipi text not null,
-  fiyat text,
-  fiyat_num numeric(12,2),
-  kanal text default 'email_push',
-  created_at timestamptz not null default now()
+  bildirim_tipi text NOT NULL,
+  eski_fiyat text,
+  yeni_fiyat text,
+  yeni_fiyat_num numeric,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 4) Scrape run metrics: useful later for cost/success analysis
-create table if not exists public.scrape_runs (
-  id bigserial primary key,
-  started_at timestamptz not null default now(),
+-- 4) Scrape çalışma logları: ileride maliyet, başarı oranı ve sorunlu site takibi için
+CREATE TABLE IF NOT EXISTS public.scrape_runs (
+  id bigserial PRIMARY KEY,
+  started_at timestamptz NOT NULL DEFAULT now(),
   finished_at timestamptz,
-  checked_count integer not null default 0,
-  success_count integer not null default 0,
-  failed_count integer not null default 0,
-  direct_count integer not null default 0,
-  proxy_count integer not null default 0,
-  render_count integer not null default 0,
-  notes text
+  total_products integer DEFAULT 0,
+  success_count integer DEFAULT 0,
+  fail_count integer DEFAULT 0,
+  direct_count integer DEFAULT 0,
+  proxy_count integer DEFAULT 0,
+  render_count integer DEFAULT 0,
+  note text
 );
 
--- 5) Indexes. Dynamic blocks avoid failures if an older schema differs.
-do $$
-begin
-  if to_regclass('public.urunler') is not null then
-    create index if not exists idx_urunler_sonraki_kontrol
-      on public.urunler (sonraki_kontrol);
+-- 5) Performans indeksleri
+CREATE INDEX IF NOT EXISTS idx_urunler_satin_alindi ON public.urunler (satin_alindi);
+CREATE INDEX IF NOT EXISTS idx_urunler_sonraki_kontrol ON public.urunler (sonraki_kontrol);
+CREATE INDEX IF NOT EXISTS idx_urunler_email ON public.urunler (email);
+CREATE INDEX IF NOT EXISTS idx_bildirim_loglari_urun_id ON public.bildirim_loglari (urun_id);
+CREATE INDEX IF NOT EXISTS idx_bildirim_loglari_created_at ON public.bildirim_loglari (created_at);
 
-    create index if not exists idx_urunler_hata_sayisi
-      on public.urunler (hata_sayisi);
-
-    if exists (
-      select 1 from information_schema.columns
-      where table_schema = 'public' and table_name = 'urunler' and column_name = 'email'
-    ) then
-      create index if not exists idx_urunler_email
-        on public.urunler (email);
-    end if;
-
-    if exists (
-      select 1 from information_schema.columns
-      where table_schema = 'public' and table_name = 'urunler' and column_name = 'satin_alindi'
-    ) then
-      create index if not exists idx_urunler_active_schedule
-        on public.urunler (satin_alindi, sonraki_kontrol, id);
-    end if;
-
-    if exists (
-      select 1 from information_schema.columns
-      where table_schema = 'public' and table_name = 'urunler' and column_name = 'guncelleme_istegi'
-    ) then
-      create index if not exists idx_urunler_manual_update
-        on public.urunler (guncelleme_istegi, id);
-    end if;
-  end if;
-
-  if to_regclass('public.fiyat_gecmisi') is not null then
-    create index if not exists idx_fiyat_gecmisi_urun_id
-      on public.fiyat_gecmisi (urun_id);
-  end if;
-end $$;
-
-create index if not exists idx_bildirim_loglari_urun_id
-  on public.bildirim_loglari (urun_id);
-
-create index if not exists idx_bildirim_loglari_created_at
-  on public.bildirim_loglari (created_at desc);
-
-create unique index if not exists uq_bildirim_loglari_event_numeric
-  on public.bildirim_loglari (urun_id, bildirim_tipi, fiyat_num)
-  where fiyat_num is not null;
-
-create unique index if not exists uq_bildirim_loglari_event_text
-  on public.bildirim_loglari (urun_id, bildirim_tipi, fiyat)
-  where fiyat_num is null and fiyat is not null;
-
--- 6) Optional RLS enablement for new tables.
--- These tables are used by backend cron/service key. Policies can be tightened later.
-alter table public.bildirim_loglari enable row level security;
-alter table public.scrape_runs enable row level security;
+-- 6) Mevcut ürünler için ilk kontrol zamanı boşsa şimdiye ayarla
+UPDATE public.urunler
+SET sonraki_kontrol = now()
+WHERE sonraki_kontrol IS NULL;
