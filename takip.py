@@ -131,6 +131,20 @@ def product_domain(url: str) -> str:
     return urllib.parse.urlsplit(url).netloc.lower().replace("www.", "")
 
 
+def extract_trendyol_content_id(url: str) -> Optional[str]:
+    parsed = urllib.parse.urlsplit(url or "")
+    if "trendyol.com" not in parsed.netloc.lower():
+        return None
+    m = re.search(r"-p-(\d+)", parsed.path)
+    if m:
+        return m.group(1)
+    for key in ["contentId", "productId", "boutiqueId"]:
+        vals = urllib.parse.parse_qs(parsed.query).get(key)
+        if vals and vals[0].isdigit():
+            return vals[0]
+    return None
+
+
 def build_scraperapi_url(target_url: str, api_key: Optional[str] = None, render_js: bool = False, premium: bool = False) -> str:
     key = api_key if api_key is not None else SCRAPER_KEY
     params = {
@@ -346,6 +360,59 @@ def price_from_json_value(value: Any) -> Optional[float]:
     return None
 
 
+def extract_trendyol_api_product_data(payload: Any) -> Tuple[Optional[str], Optional[str]]:
+    root = payload.get("result", payload) if isinstance(payload, dict) else payload
+    best_name = None
+    best_price = None
+    for obj in walk_json(root):
+        if not best_name:
+            for key in ["name", "title", "productName"]:
+                val = obj.get(key)
+                if isinstance(val, str) and len(val.strip()) >= 3:
+                    best_name = val
+                    break
+        if best_price is None:
+            for key in ["price", "discountedPrice", "sellingPrice", "originalPrice", "salePrice", "currentPrice"]:
+                parsed = price_from_json_value(obj.get(key))
+                if parsed:
+                    best_price = parsed
+                    break
+        if best_name and best_price:
+            return format_price(best_price), clean_name(best_name)
+    return (format_price(best_price) if best_price else None), clean_name(best_name)
+
+
+def fetch_trendyol_api(url: str) -> Tuple[Optional[str], str]:
+    content_id = extract_trendyol_content_id(url)
+    if not content_id:
+        return None, "trendyol_api_no_content_id"
+    endpoints = [
+        f"https://www.trendyol.com/discovery-web-productgw-service/api/productDetail/{content_id}?storefrontId=1&culture=tr-TR",
+        f"https://apigw.trendyol.com/discovery-web-productgw-service/api/productDetail/{content_id}?storefrontId=1&culture=tr-TR",
+    ]
+    headers = {
+        "User-Agent": UA_MOBILE,
+        "Accept": "application/json,text/plain,*/*",
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8",
+        "Origin": "https://www.trendyol.com",
+        "Referer": "https://www.trendyol.com/",
+    }
+    for endpoint in endpoints:
+        try:
+            payload = http_json(endpoint, headers=headers)
+            price, name = extract_trendyol_api_product_data(payload)
+            if price:
+                pseudo_html = (
+                    '<script type="application/ld+json">'
+                    + json.dumps({"@type": "Product", "name": name, "offers": {"price": parse_price(price)}}, ensure_ascii=False)
+                    + '</script>'
+                )
+                return pseudo_html, "trendyol_api"
+        except Exception as e:
+            print("Trendyol API basarisiz:", type(e).__name__, str(e)[:160])
+    return None, "trendyol_api_failed"
+
+
 def extract_from_embedded_product_json(html: str) -> Tuple[Optional[str], Optional[str]]:
     best_name = None
     best_price = None
@@ -413,6 +480,10 @@ def fetch_product_data(url: str) -> Tuple[Optional[str], Optional[str], str]:
 
     # 1) En ucuz: direkt HTML. Birçok site JSON-LD/metadan fiyat verir.
     attempts.append(fetch_direct(url))
+
+    # 1b) Trendyol özel ürün API denemesi. Ücretsizdir; çalışırsa proxy maliyetini düşürür.
+    if "trendyol.com" in domain:
+        attempts.append(fetch_trendyol_api(url))
 
     # 2) Ucuz proxy: JS render yok, premium yok.
     attempts.append(fetch_scraperapi(url, render_js=False, premium=False))

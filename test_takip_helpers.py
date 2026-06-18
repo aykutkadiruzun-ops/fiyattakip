@@ -42,6 +42,26 @@ def test_extract_product_data_from_json_ld():
     assert name == "Test Ayakkabı"
 
 
+def test_extract_trendyol_content_id_from_url():
+    from takip import extract_trendyol_content_id
+
+    assert extract_trendyol_content_id("https://www.trendyol.com/marka/urun-adi-p-1124000210?merchantId=123") == "1124000210"
+    assert extract_trendyol_content_id("https://www.trendyol.com/sr?q=abc") is None
+
+
+def test_extract_trendyol_api_product_data():
+    from takip import extract_trendyol_api_product_data
+
+    payload = {
+        "result": {
+            "name": "Retinol Bakuchiol Body Lotion",
+            "price": {"discountedPrice": {"text": "249,90 TL"}},
+        }
+    }
+    assert extract_trendyol_api_product_data(payload) == ("249,90 TL", "Retinol Bakuchiol Body Lotion")
+
+
+
 def test_safe_patch_product_retries_without_missing_supabase_columns(monkeypatch=None):
     import takip
 
