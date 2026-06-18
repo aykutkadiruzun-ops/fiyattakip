@@ -174,6 +174,15 @@ def test_due_products_query_filters_by_next_check():
     assert "limit=25" in path
 
 
+def test_force_all_products_query_ignores_next_check():
+    from takip import build_all_active_products_path
+
+    path = build_all_active_products_path(limit=25)
+    assert "satin_alindi=is.false" in path
+    assert "sonraki_kontrol" not in path
+    assert "limit=25" in path
+
+
 def test_extract_browser_fallback_url_from_trendyol_intent_redirect():
     from takip import extract_browser_fallback_url
 

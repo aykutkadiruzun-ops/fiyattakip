@@ -32,6 +32,7 @@ PROXY_USERNAME = os.environ.get("PROXY_USERNAME", "")
 PROXY_PASSWORD = os.environ.get("PROXY_PASSWORD", "")
 PLAYWRIGHT_FALLBACK = os.environ.get("PLAYWRIGHT_FALLBACK", "false").lower() == "true"
 MAX_PRODUCTS_PER_RUN = int(os.environ.get("MAX_PRODUCTS_PER_RUN", "40"))
+FORCE_CHECK_ALL = os.environ.get("FORCE_CHECK_ALL", "false").lower() == "true"
 
 # Run içinde öğrenilen durumlar. Amaç: aynı GitHub Actions çalışmasında
 # aynı 400/403 hatalarını her ürün için tekrar tekrar üretmemek.
@@ -475,8 +476,21 @@ def build_due_products_path(now: Optional[str] = None, limit: Optional[int] = No
     )
 
 
+def build_all_active_products_path(limit: Optional[int] = None) -> str:
+    lim = limit if limit is not None else MAX_PRODUCTS_PER_RUN
+    return (
+        "/rest/v1/urunler?select=*"
+        "&satin_alindi=is.false"
+        "&order=guncelleme_istegi.desc,id.asc"
+        f"&limit={lim}"
+    )
+
+
 def urunleri_getir() -> list:
     try:
+        if FORCE_CHECK_ALL:
+            print("FORCE_CHECK_ALL aktif: kontrol zamani beklenmeden aktif urunler cekiliyor.")
+            return supabase_get(build_all_active_products_path()) or []
         return supabase_get(build_due_products_path()) or []
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")

@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '0 5,10,17 * * *'
   workflow_dispatch:
+    inputs:
+      force_check_all:
+        description: 'Kontrol zamani gelmemis urunleri de zorla kontrol et'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   takip:
@@ -29,4 +38,5 @@ jobs:
           VAPID_EMAIL: ${{ secrets.VAPID_EMAIL }}
           MAX_PRODUCTS_PER_RUN: '40'
           PLAYWRIGHT_FALLBACK: 'false'
+          FORCE_CHECK_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.force_check_all || 'false' }}
         run: python takip.py
