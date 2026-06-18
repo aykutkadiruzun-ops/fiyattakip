@@ -299,6 +299,13 @@ def extract_product_data(html: Optional[str]) -> Tuple[Optional[str], Optional[s
             if price_value:
                 break
 
+    if not price_value:
+        embedded_price, embedded_name = extract_from_embedded_product_json(html)
+        if embedded_price:
+            return embedded_price, clean_name(name or embedded_name)
+        if embedded_name and not name:
+            name = embedded_name
+
     if not name:
         for pattern in [
             r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']{3,180})["\']',
@@ -318,9 +325,50 @@ def clean_name(name: Any) -> Optional[str]:
     if not name:
         return None
     text = html_lib.unescape(str(name))
+    text = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), text)
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"\s*[|—-]\s*(Trendyol|Hepsiburada|Amazon|Bershka|Zara|Rafta).*$", "", text, flags=re.I)
     return text[:180] if text else None
+
+
+def price_from_json_value(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value) if value > 0 else None
+    if isinstance(value, str):
+        return parse_price(value)
+    if isinstance(value, dict):
+        for key in ["text", "formattedValue", "value", "price", "discountedPrice", "sellingPrice", "originalPrice"]:
+            parsed = price_from_json_value(value.get(key))
+            if parsed:
+                return parsed
+    return None
+
+
+def extract_from_embedded_product_json(html: str) -> Tuple[Optional[str], Optional[str]]:
+    best_name = None
+    best_price = None
+    # Trendyol ve benzeri SPA'larda fiyat genelde script içindeki JSON objelerinde olur.
+    for obj_match in re.finditer(r'\{[^{}]{0,3000}(?:discountedPrice|sellingPrice|originalPrice|salePrice|price)[^{}]{0,3000}\}', html, re.I | re.S):
+        raw = html_lib.unescape(obj_match.group(0))
+        raw = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), raw)
+        for price_pattern in [
+            r'"(?:text|formattedValue|priceText)"\s*:\s*"([^"\\]*(?:TL|₺)[^"\\]*)"',
+            r'"(?:discountedPrice|sellingPrice|originalPrice|salePrice|price|value)"\s*:\s*"?([0-9]+(?:[.,][0-9]+)?)"?',
+        ]:
+            pm = re.search(price_pattern, raw, re.I)
+            if pm:
+                best_price = parse_price(pm.group(1))
+                if best_price:
+                    break
+        if not best_name:
+            nm = re.search(r'"(?:name|title|productName)"\s*:\s*"([^"\\]{5,180})"', raw, re.I)
+            if nm:
+                best_name = nm.group(1)
+        if best_price:
+            return format_price(best_price), clean_name(best_name)
+    return None, clean_name(best_name)
 
 
 def extract_browser_fallback_url(location: str) -> Optional[str]:

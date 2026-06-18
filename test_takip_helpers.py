@@ -278,6 +278,27 @@ def test_log_notification_writes_event_key():
     assert calls[0][1]["fiyat"] == "729,95 TL"
 
 
+def test_extract_trendyol_embedded_json_price_and_name():
+    from takip import extract_product_data
+
+    html = r'''
+    <html><body>
+    <script>
+    window.__PRODUCT_DETAIL_APP_INITIAL_STATE__ = {
+      "product": {
+        "name": "Kabarna Desenli Premium Elbise",
+        "price": {"discountedPrice": {"text": "899,99 TL", "value": 899.99}},
+        "variants": []
+      }
+    };
+    </script>
+    </body></html>
+    '''
+    price, name = extract_product_data(html)
+    assert price == "899,99 TL"
+    assert name == "Kabarna Desenli Premium Elbise"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in globals().items() if k.startswith("test_") and callable(v)]
     for test in tests:
