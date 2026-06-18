@@ -349,16 +349,35 @@ def supabase_post(path: str, data: Dict[str, Any]) -> None:
 
 
 def safe_patch_product(urun_id: Any, data: Dict[str, Any]) -> None:
-    try:
-        supabase_patch("/rest/v1/urunler?id=eq." + urllib.parse.quote(str(urun_id)), data)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="ignore")
-        print("PATCH detay alanlarla basarisiz:", e.code, body[:300])
-        minimal = {k: v for k, v in data.items() if k in {"son_fiyat", "urun_adi", "guncelleme_istegi"}}
-        if minimal and minimal != data:
-            supabase_patch("/rest/v1/urunler?id=eq." + urllib.parse.quote(str(urun_id)), minimal)
-        else:
+    path = "/rest/v1/urunler?id=eq." + urllib.parse.quote(str(urun_id))
+    payload = dict(data)
+    tried_payloads = []
+
+    while payload:
+        tried_payloads.append(set(payload.keys()))
+        try:
+            supabase_patch(path, payload)
+            return
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="ignore")
+            print("PATCH alanlarla basarisiz:", e.code, body[:300])
+
+            missing = re.search(r"Could not find the ['\"]([^'\"]+)['\"] column", body)
+            if missing:
+                missing_col = missing.group(1)
+                if missing_col in payload:
+                    print("Supabase semasinda olmayan kolon atlandi:", missing_col)
+                    payload.pop(missing_col, None)
+                    continue
+
+            # Eski/dar semalar için en güvenli minimum güncelleme.
+            minimal = {k: v for k, v in payload.items() if k in {"son_fiyat", "urun_adi", "guncelleme_istegi"}}
+            if minimal and set(minimal.keys()) not in tried_payloads and minimal != payload:
+                payload = minimal
+                continue
             raise
+
+    print("PATCH atlandi: yazilacak uyumlu kolon kalmadi", urun_id)
 
 
 def should_skip_product(urun: Dict[str, Any]) -> bool:

@@ -1,3 +1,4 @@
+import urllib.error
 import sys
 from pathlib import Path
 
@@ -39,6 +40,45 @@ def test_extract_product_data_from_json_ld():
     price, name = extract_product_data(html)
     assert price == "1.234,56 TL"
     assert name == "Test Ayakkabı"
+
+
+def test_safe_patch_product_retries_without_missing_supabase_columns(monkeypatch=None):
+    import takip
+
+    calls = []
+
+    class FakeHTTPError(urllib.error.HTTPError):
+        def __init__(self, body):
+            super().__init__("url", 400, "Bad Request", None, None)
+            self._body = body.encode("utf-8")
+
+        def read(self):
+            return self._body
+
+    def fake_patch(path, data):
+        calls.append(dict(data))
+        if "hata_sayisi" in data:
+            raise FakeHTTPError('{"message":"Could not find the \'hata_sayisi\' column of \'urunler\' in the schema cache"}')
+        if "son_kontrol" in data:
+            raise FakeHTTPError('{"message":"Could not find the \'son_kontrol\' column of \'urunler\' in the schema cache"}')
+
+    old = takip.supabase_patch
+    takip.supabase_patch = fake_patch
+    try:
+        takip.safe_patch_product(1, {
+            "son_fiyat": "729,95 TL",
+            "urun_adi": "Test",
+            "hata_sayisi": 0,
+            "son_kontrol": "2026-01-01T00:00:00+00:00",
+            "guncelleme_istegi": False,
+        })
+    finally:
+        takip.supabase_patch = old
+
+    assert len(calls) == 3
+    assert "hata_sayisi" not in calls[-1]
+    assert "son_kontrol" not in calls[-1]
+    assert calls[-1]["son_fiyat"] == "729,95 TL"
 
 
 if __name__ == "__main__":
