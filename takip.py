@@ -612,8 +612,11 @@ def kontrol_et(urun: Dict[str, Any]) -> None:
     eski_fiyat = urun.get("son_fiyat")
     urun_adi = urun.get("urun_adi")
 
-    if should_skip_product(urun):
-        print("Kontrol zamani gelmedi veya satin alinmis, atlandi:", urun_id, url)
+    if urun.get("satin_alindi") is True:
+        print("Satin alinmis, atlandi:", urun_id, url)
+        return
+    if not FORCE_CHECK_ALL and should_skip_product(urun):
+        print("Kontrol zamani gelmedi, atlandi:", urun_id, url)
         return
 
     print("Kontrol ediliyor:", urun_id, url)

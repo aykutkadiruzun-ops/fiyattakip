@@ -183,6 +183,36 @@ def test_force_all_products_query_ignores_next_check():
     assert "limit=25" in path
 
 
+def test_force_check_all_does_not_skip_future_next_check():
+    import takip
+
+    old_force = takip.FORCE_CHECK_ALL
+    calls = []
+    takip.FORCE_CHECK_ALL = True
+    try:
+        def fake_fetch(url):
+            calls.append(url)
+            return None, None, "test"
+        old_fetch = takip.fetch_product_data
+        old_patch = takip.safe_patch_product
+        takip.fetch_product_data = fake_fetch
+        takip.safe_patch_product = lambda urun_id, data: None
+        try:
+            takip.kontrol_et({
+                "id": 99,
+                "url": "https://example.com/p",
+                "sonraki_kontrol": "2099-01-01T00:00:00+00:00",
+                "satin_alindi": False,
+            })
+        finally:
+            takip.fetch_product_data = old_fetch
+            takip.safe_patch_product = old_patch
+    finally:
+        takip.FORCE_CHECK_ALL = old_force
+
+    assert calls == ["https://example.com/p"]
+
+
 def test_extract_browser_fallback_url_from_trendyol_intent_redirect():
     from takip import extract_browser_fallback_url
 
