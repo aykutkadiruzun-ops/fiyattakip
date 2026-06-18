@@ -31,6 +31,8 @@ PROXY_SERVER = os.environ.get("PROXY_SERVER", "")
 PROXY_USERNAME = os.environ.get("PROXY_USERNAME", "")
 PROXY_PASSWORD = os.environ.get("PROXY_PASSWORD", "")
 PLAYWRIGHT_FALLBACK = os.environ.get("PLAYWRIGHT_FALLBACK", "false").lower() == "true"
+PLAYWRIGHT_MAX_PER_RUN = int(os.environ.get("PLAYWRIGHT_MAX_PER_RUN", "3"))
+PLAYWRIGHT_USED = 0
 MAX_PRODUCTS_PER_RUN = int(os.environ.get("MAX_PRODUCTS_PER_RUN", "40"))
 FORCE_CHECK_ALL = os.environ.get("FORCE_CHECK_ALL", "false").lower() == "true"
 
@@ -209,8 +211,14 @@ def fetch_scraperapi(url: str, render_js: bool = False, premium: bool = False) -
 
 
 def fetch_playwright(url: str) -> Tuple[Optional[str], str]:
-    if not (PLAYWRIGHT_AVAILABLE and PLAYWRIGHT_FALLBACK):
+    global PLAYWRIGHT_USED
+    if not PLAYWRIGHT_FALLBACK:
         return None, "playwright_disabled"
+    if not PLAYWRIGHT_AVAILABLE:
+        return None, "playwright_not_installed"
+    if PLAYWRIGHT_USED >= PLAYWRIGHT_MAX_PER_RUN:
+        return None, "playwright_limit_reached"
+    PLAYWRIGHT_USED += 1
     try:
         with sync_playwright() as p:
             launch_kwargs: Dict[str, Any] = {"headless": True}
@@ -232,7 +240,7 @@ def fetch_playwright(url: str) -> Tuple[Optional[str], str]:
             )
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(8000)
             content = page.content()
             browser.close()
             return content, "playwright_proxy" if PROXY_SERVER else "playwright_direct"

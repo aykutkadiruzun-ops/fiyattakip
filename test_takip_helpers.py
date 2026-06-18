@@ -164,6 +164,38 @@ def test_scraperapi_403_disables_more_scraper_calls():
     assert len(calls) == 1
 
 
+def test_playwright_fallback_respects_manual_limit_when_not_installed():
+    import takip
+
+    old_enabled = takip.PLAYWRIGHT_FALLBACK
+    old_available = takip.PLAYWRIGHT_AVAILABLE
+    old_used = takip.PLAYWRIGHT_USED
+    old_limit = takip.PLAYWRIGHT_MAX_PER_RUN
+    takip.PLAYWRIGHT_FALLBACK = True
+    takip.PLAYWRIGHT_AVAILABLE = False
+    takip.PLAYWRIGHT_USED = 0
+    takip.PLAYWRIGHT_MAX_PER_RUN = 1
+    try:
+        assert takip.fetch_playwright("https://example.com")[1] == "playwright_not_installed"
+        assert takip.PLAYWRIGHT_USED == 0
+    finally:
+        takip.PLAYWRIGHT_FALLBACK = old_enabled
+        takip.PLAYWRIGHT_AVAILABLE = old_available
+        takip.PLAYWRIGHT_USED = old_used
+        takip.PLAYWRIGHT_MAX_PER_RUN = old_limit
+
+
+def test_playwright_fallback_disabled_by_default():
+    import takip
+
+    old_enabled = takip.PLAYWRIGHT_FALLBACK
+    takip.PLAYWRIGHT_FALLBACK = False
+    try:
+        assert takip.fetch_playwright("https://example.com")[1] == "playwright_disabled"
+    finally:
+        takip.PLAYWRIGHT_FALLBACK = old_enabled
+
+
 def test_fetch_product_data_skips_proxy_attempts_after_scraperapi_disabled():
     import takip
 

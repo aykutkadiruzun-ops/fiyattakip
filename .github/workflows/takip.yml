@@ -13,6 +13,18 @@ on:
         options:
           - 'false'
           - 'true'
+      enable_playwright:
+        description: 'Son care olarak Playwright/Chromium fallback acilsin mi? Manuel test icin true yap.'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      playwright_max_per_run:
+        description: 'Bu run icinde en fazla kac urunde Playwright denensin?'
+        required: false
+        default: '3'
 
 jobs:
   takip:
@@ -28,6 +40,13 @@ jobs:
       - name: Bagimliliklari kur
         run: pip install -r requirements.txt
 
+      - name: Playwright kur (manuel fallback aciksa)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_playwright == 'true' }}
+        run: |
+          pip install playwright
+          playwright install chromium
+          playwright install-deps chromium
+
       - name: Fiyatlari kontrol et
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -37,6 +56,7 @@ jobs:
           VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
           VAPID_EMAIL: ${{ secrets.VAPID_EMAIL }}
           MAX_PRODUCTS_PER_RUN: '40'
-          PLAYWRIGHT_FALLBACK: 'false'
+          PLAYWRIGHT_FALLBACK: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_playwright || 'false' }}
+          PLAYWRIGHT_MAX_PER_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.playwright_max_per_run || '3' }}
           FORCE_CHECK_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.force_check_all || 'false' }}
         run: python takip.py
