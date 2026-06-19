@@ -1743,10 +1743,22 @@ function cardHTML(p, context = 'products') {
             </div>
             <span style="font-family:var(--serif);font-size:14px;color:var(--text)">${fmt(p.hedef_fiyat)}</span>
           </div>
-          ${!onTarget && sonFiyat > hedefFiyat ? `
-          <div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border2);font-size:11px;color:var(--muted)">
-            <span style="color:var(--warning);font-weight:500">₺${(sonFiyat - hedefFiyat).toLocaleString('tr-TR')} kaldı</span> hedefe ulaşmak için
-          </div>` : ''}
+          ${!onTarget && sonFiyat > hedefFiyat ? (() => {
+            const baslangic = parsePrice(p.ilk_fiyat) || sonFiyat * 1.2;
+            const toplamDusus = baslangic - hedefFiyat;
+            const mevcutDusus = baslangic - sonFiyat;
+            const yuzde = Math.min(100, Math.max(0, Math.round((mevcutDusus / toplamDusus) * 100)));
+            return `
+          <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border2)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+              <span style="font-size:10px;color:var(--muted)">Hedefe %${yuzde} yaklaştın</span>
+              <span style="font-size:10px;color:var(--warning);font-weight:500">₺${(sonFiyat - hedefFiyat).toLocaleString('tr-TR')} kaldı</span>
+            </div>
+            <div style="height:3px;background:var(--border);border-radius:99px;overflow:hidden">
+              <div style="height:100%;width:${yuzde}%;background:var(--success);border-radius:99px;transition:width .3s"></div>
+            </div>
+          </div>`;
+          })() : ''}
         </div>
       ` : ''}
     `;
@@ -1792,12 +1804,17 @@ function cardHTML(p, context = 'products') {
       style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;background:var(--bg);border:0.5px solid var(--border);border-radius:10px;text-decoration:none;color:var(--text);font-family:var(--sans);font-size:13px;font-weight:500;transition:background .15s"
       onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      Ürüne Git
+      ${hostname ? hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1) + "'e Git" : 'Ürüne Git'}
+    </a>
     </a>
 
     <!-- Son kontrol + aksiyonlar -->
+    ${hasFiyat && drop ? `
+    <div style="font-size:11px;color:var(--success);background:var(--success-bg);padding:6px 10px;border-radius:8px;margin-bottom:8px;font-weight:500">
+      Son kontrolden beri ₺${(parsePrice(p.ilk_fiyat)-parsePrice(p.son_fiyat)).toLocaleString('tr-TR')} düştü
+    </div>` : ''}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-      <div style="font-size:10px;color:var(--faint)">${lastCheck ? `Son kontrol: ${lastCheck}` : ''}</div>
+      <div style="font-size:10px;color:var(--faint)">${lastCheck ? `🕐 ${lastCheck}` : ''}</div>
       <div style="display:flex;gap:5px">
         <button class="btn-icon" aria-label="Fiyat geçmişi" onclick="showHistory(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
