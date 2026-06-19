@@ -1089,6 +1089,7 @@
     <button class="btn-primary" type="button" onclick="createNewCollection()" style="background:var(--text);color:var(--bg)">Koleksiyon oluştur</button>
   </div>
 </div>
+</div>
 
 <!-- MODAL: KOLEKSİYON SEÇİCİ -->
 <div class="modal-overlay" id="collection-picker-overlay" onclick="closeCollectionPicker(event)">
@@ -1684,7 +1685,7 @@ function renderAllProducts() {
 }
 
 // Card HTML
-functifunction cardHTML(p, context = 'products') {
+function cardHTML(p, context = 'products') {
   const hasFiyat = parsePrice(p.son_fiyat) !== null;
   const drop     = hasFiyat && p.ilk_fiyat && parsePrice(p.son_fiyat) < parsePrice(p.ilk_fiyat);
   const onTarget = hasFiyat && p.hedef_fiyat && parsePrice(p.son_fiyat) <= parsePrice(p.hedef_fiyat);
