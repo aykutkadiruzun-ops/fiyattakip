@@ -1727,9 +1727,25 @@ function cardHTML(p, context = 'products') {
       <span style="font-size:11px;font-weight:600;color:var(--success)">${bugunDustu ? `₺${(ilkFiyat-sonFiyat).toLocaleString('tr-TR')} düştü — açıp bakayım` : 'ALMAK İÇİN İYİ BİR ZAMAN'}</span>
     </div>`;
   } else if (hasFiyat) {
-    statusHTML = `<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);margin-bottom:12px">
-      <span>🟢</span>
-      <span style="font-size:11px;font-weight:500;color:var(--muted)">Fiyat stabil — beklemek mantıklı</span>
+    const updatedAt = p.updated_at ? new Date(p.updated_at) : null;
+    const stableDays = updatedAt ? Math.floor((Date.now() - updatedAt.getTime()) / 86400000) : null;
+    const lastDropAt = p.ilk_fiyat && p.son_fiyat ? Math.floor((Date.now() - new Date(p.updated_at).getTime()) / 86400000) : null;
+
+    let kanit = '';
+    if (stableDays !== null && stableDays >= 7) {
+      kanit = `Son ${stableDays} gündür fiyat değişmedi.`;
+    } else if (stableDays !== null && stableDays >= 1) {
+      kanit = `Bu ay henüz indirim başlamadı.`;
+    } else {
+      kanit = `Bugün fiyat değişmedi.`;
+    }
+
+    statusHTML = `<div style="padding:7px 10px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span>🟢</span>
+        <span style="font-size:11px;font-weight:500;color:var(--muted)">Beklemek mantıklı</span>
+      </div>
+      <div style="font-size:10px;color:var(--faint);padding-left:19px">${kanit}</div>
     </div>`;
   }
 
