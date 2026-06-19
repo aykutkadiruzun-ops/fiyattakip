@@ -762,6 +762,19 @@
 
   <!-- Ana Sayfa -->
   <div class="page active" id="page-home">
+    <div style="background:var(--surface);border-radius:14px;padding:18px 16px;margin:20px 0 0;border:0.5px solid var(--border)">
+  <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">Beğendiğin ürünü kaybetme.</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Linkini yapıştır, fiyatını Rafta takip etsin.</div>
+  <div style="display:flex;gap:8px">
+    <input type="url" id="quick-url" placeholder="Ürün linkini buraya yapıştır"
+      style="flex:1;padding:10px 12px;border:0.5px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:13px;color:var(--text);background:var(--bg);outline:none"
+      onkeydown="if(event.key==='Enter')quickAdd()" />
+    <button onclick="quickAdd()"
+      style="padding:10px 14px;background:var(--text);color:var(--bg);border:none;border-radius:9px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">
+      Fiyatı Takip Et
+    </button>
+  </div>
+</div>
     <div class="greeting">
       <div class="page-eyebrow" id="home-date"></div>
       <div class="page-title">Fiyatlar takipte,<br><em>sen rahat ol.</em></div>
@@ -1478,7 +1491,20 @@ window.goBack = () => {
     if (prev==='collection-detail') renderCollectionDetail();
   }
 };
+window.quickAdd = () => {
+  const val = document.getElementById('quick-url').value.trim();
+  if (val) {
+    document.getElementById('new-url').value = val;
+    document.getElementById('quick-url').value = '';
+  }
+  openModal();
+  setTimeout(() => {
+    if (!val) document.getElementById('new-url')?.focus();
+  }, 150);
+};
 
+// Page nav
+window.goPage = name => {
 // Page nav
 window.goPage = name => {
   hideToast();
