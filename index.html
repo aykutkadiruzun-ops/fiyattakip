@@ -1838,6 +1838,16 @@ function renderCollections() {
     const drops   = aktif.filter(p => p.ilk_fiyat && p.son_fiyat && parsePrice(p.son_fiyat) < parsePrice(p.ilk_fiyat));
     const saving  = urunler.reduce((s,p) => s + (parsePrice(p.tasarruf)||0), 0);
     const preview = aktif.slice(0,3);
+
+    // Yeni hesaplamalar
+    const toplamDeger = aktif.reduce((s,p) => s + (parsePrice(p.son_fiyat)||0), 0);
+    const beklenenTasarruf = aktif.reduce((s,p) => {
+      const son = parsePrice(p.son_fiyat);
+      const hedef = parsePrice(p.hedef_fiyat);
+      if (son && hedef && son > hedef) return s + (son - hedef);
+      return s;
+    }, 0);
+    const sonDusen = drops.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
     return `
     <div class="col-card">
       <div class="col-card-top" style="cursor:pointer" onclick="openCollection('${k.replace(/'/g,"\'")}')">
