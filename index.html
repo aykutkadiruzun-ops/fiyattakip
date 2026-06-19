@@ -763,16 +763,17 @@
   <!-- Ana Sayfa -->
   <div class="page active" id="page-home">
     <div style="padding:24px 0 8px">
-  <div style="font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px">Ürün linkini yapıştır</div>
-  <div style="display:flex;flex-direction:column;gap:10px">
-    <input type="url" id="quick-url" placeholder="trendyol.com, bershka.com, zara.com…"
-      oninput="document.getElementById('quick-add-btn').style.background=this.value.trim()?'var(--text)':'var(--border)';document.getElementById('quick-add-btn').style.color=this.value.trim()?'var(--bg)':'var(--muted)'"
-      style="width:100%;padding:16px 18px;border:0.5px solid var(--border);border-radius:14px;font-family:var(--sans);font-size:15px;color:var(--text);background:var(--surface);outline:none;transition:border-color .2s"
-      onfocus="this.style.borderColor='var(--muted)'" onblur="this.style.borderColor='var(--border)'"
-      onkeydown="if(event.key==='Enter')quickAdd()" />
+  <div style="position:relative;display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:6px 6px 6px 18px;transition:border-color .2s"
+    id="quick-capture-wrap">
+    <input type="url" id="quick-url" placeholder="Ürün linkini yapıştır…"
+      oninput="const v=this.value.trim();const btn=document.getElementById('quick-add-btn');btn.style.background=v?'var(--text)':'transparent';btn.style.color=v?'var(--bg)':'var(--faint)';"
+      onfocus="document.getElementById('quick-capture-wrap').style.borderColor='var(--muted)'"
+      onblur="document.getElementById('quick-capture-wrap').style.borderColor='var(--border)'"
+      onkeydown="if(event.key==='Enter')quickAdd()"
+      style="flex:1;border:none;background:transparent;font-family:var(--sans);font-size:15px;color:var(--text);outline:none;padding:10px 0" />
     <button id="quick-add-btn" onclick="quickAdd()"
-      style="width:100%;padding:15px;background:var(--border);color:var(--muted);border:none;border-radius:14px;font-family:var(--sans);font-size:15px;font-weight:500;cursor:pointer;transition:all .2s;letter-spacing:-0.1px">
-      Fiyatı Takip Et
+      style="flex-shrink:0;padding:10px 18px;background:transparent;color:var(--faint);border:none;border-radius:12px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap">
+      Takip Et
     </button>
   </div>
 </div>
