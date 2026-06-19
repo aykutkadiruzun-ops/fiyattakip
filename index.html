@@ -1073,7 +1073,8 @@
       <button class="btn-primary" onclick="saveFallbackTarget()" style="background:var(--text);color:var(--bg)">Tamam</button>
     </div>
 
-  </div>
+ </div>
+</div>
   
 <!-- MODAL: YENİ KOLEKSİYON -->
 <div class="modal-overlay" id="new-collection-overlay" onclick="closeNewCollectionOutside(event)">
@@ -1088,7 +1089,6 @@
     </div>
     <button class="btn-primary" type="button" onclick="createNewCollection()" style="background:var(--text);color:var(--bg)">Koleksiyon oluştur</button>
   </div>
-</div>
 </div>
 
 <!-- MODAL: KOLEKSİYON SEÇİCİ -->
@@ -1696,75 +1696,122 @@ function cardHTML(p, context = 'products') {
   const isStalePending = isPendingInfo && pendingMinutes >= 15;
 
   const hostname = (() => { try { return new URL(p.url).hostname.replace('www.',''); } catch(e) { return p.url; } })();
-  const safeName = escText(hasName ? p.urun_adi : (isStalePending ? 'Ürün bilgisi alınıyor…' : 'Ürün bilgisi alınıyor…'));
+  const siteName = (() => {
+    const h = hostname.split('.')[0];
+    return h.charAt(0).toUpperCase() + h.slice(1);
+  })();
+  const safeName = escText(hasName ? p.urun_adi : 'Ürün bilgisi alınıyor…');
   const safeUrl = escAttr(p.url || '#');
   const menuId = `more-menu-${context}-${p.id}`;
 
-  // Durum mesajı
+  const sonFiyat = parsePrice(p.son_fiyat);
+  const hedefFiyat = parsePrice(p.hedef_fiyat);
+  const ilkFiyat = parsePrice(p.ilk_fiyat);
+
+  // ── DURUM SİSTEMİ ──
   let statusHTML = '';
-  if (!hasFiyat) {
-    statusHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
-      <div class="spinner" style="width:12px;height:12px;border-width:1.5px"></div>
-      <span style="font-size:11px;color:var(--muted)">Fiyat bilgisi bekleniyor…</span>
+  if (isPendingInfo && !isStalePending) {
+    statusHTML = `<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);margin-bottom:12px">
+      <div class="spinner" style="width:11px;height:11px;border-width:1.5px;flex-shrink:0"></div>
+      <span style="font-size:11px;color:var(--muted)">İlk fiyat bekleniyor — süreç işliyor</span>
     </div>`;
   } else if (onTarget) {
-    statusHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;background:var(--success-bg);padding:7px 10px;border-radius:8px">
-      <span style="font-size:13px">🎯</span>
-      <span style="font-size:11px;font-weight:600;color:var(--success)">HEDEFE ULAŞTI — ALMAK İÇİN İYİ BİR ZAMAN</span>
+    statusHTML = `<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:var(--success-bg);margin-bottom:12px">
+      <span>🎯</span>
+      <span style="font-size:11px;font-weight:600;color:var(--success)">HEDEFE ULAŞTI — ALMAK İÇİN EN İYİ ZAMAN</span>
     </div>`;
-  } else if (drop) {
-    statusHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;background:var(--success-bg);padding:7px 10px;border-radius:8px">
-      <span style="font-size:13px">🟢</span>
-      <span style="font-size:11px;font-weight:600;color:var(--success)">ALMAK İÇİN İYİ BİR ZAMAN</span>
+  } else if (hasFiyat && drop) {
+    const bugunDustu = ilkFiyat && sonFiyat < ilkFiyat;
+    statusHTML = `<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:var(--success-bg);margin-bottom:12px">
+      <span>🟢</span>
+      <span style="font-size:11px;font-weight:600;color:var(--success)">${bugunDustu ? `₺${(ilkFiyat-sonFiyat).toLocaleString('tr-TR')} düştü — açıp bakayım` : 'ALMAK İÇİN İYİ BİR ZAMAN'}</span>
     </div>`;
-  } else {
-    statusHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;background:var(--bg);padding:7px 10px;border-radius:8px;border:0.5px solid var(--border)">
-      <span style="font-size:13px">⏳</span>
-      <span style="font-size:11px;font-weight:500;color:var(--muted)">TAKİPTE</span>
+  } else if (hasFiyat) {
+    statusHTML = `<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);margin-bottom:12px">
+      <span>🟢</span>
+      <span style="font-size:11px;font-weight:500;color:var(--muted)">Fiyat stabil — beklemek mantıklı</span>
     </div>`;
   }
 
-  // Fiyat bloğu
+  // ── FİYAT BLOĞU ──
   let priceHTML = '';
   if (hasFiyat) {
-    const sonFiyat = parsePrice(p.son_fiyat);
-    const hedefFiyat = parsePrice(p.hedef_fiyat);
     priceHTML = `
-      <div style="font-family:var(--serif);font-size:26px;color:${onTarget?'var(--success)':drop?'var(--success)':'var(--text)'};letter-spacing:-0.5px;margin-bottom:${hedefFiyat?'12px':'0'}">
+      <div style="font-family:var(--serif);font-size:26px;color:${onTarget?'var(--success)':drop?'var(--success)':'var(--text)'};letter-spacing:-0.5px;line-height:1;margin-bottom:4px">
         ${fmt(p.son_fiyat)}
       </div>
-      ${drop && p.ilk_fiyat ? `<div style="font-size:11px;color:var(--faint);text-decoration:line-through;margin-top:-8px;margin-bottom:8px">${fmt(p.ilk_fiyat)}</div>` : ''}
-      ${hedefFiyat ? `
+      ${drop && ilkFiyat ? `<div style="font-size:11px;color:var(--faint);text-decoration:line-through;margin-bottom:10px">${fmt(p.ilk_fiyat)}</div>` : '<div style="margin-bottom:10px"></div>'}
+    `;
+
+    // Hedef fiyat kutusu
+    if (hedefFiyat) {
+      const progressYuzde = (() => {
+        if (onTarget) return 100;
+        const baslangic = ilkFiyat || sonFiyat * 1.3;
+        const toplamDusus = baslangic - hedefFiyat;
+        const mevcutDusus = baslangic - sonFiyat;
+        if (toplamDusus <= 0) return 0;
+        return Math.min(100, Math.max(0, Math.round((mevcutDusus / toplamDusus) * 100)));
+      })();
+
+      priceHTML += `
         <div style="background:var(--bg);border-radius:10px;padding:10px 12px;border:0.5px solid var(--border2)">
-          <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="display:flex;align-items:center;gap:5px">
               <span style="font-size:11px">🎯</span>
               <span style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Hedefin</span>
             </div>
             <span style="font-family:var(--serif);font-size:14px;color:var(--text)">${fmt(p.hedef_fiyat)}</span>
           </div>
-          ${!onTarget && sonFiyat > hedefFiyat ? (() => {
-            const baslangic = parsePrice(p.ilk_fiyat) || sonFiyat * 1.2;
-            const toplamDusus = baslangic - hedefFiyat;
-            const mevcutDusus = baslangic - sonFiyat;
-            const yuzde = Math.min(100, Math.max(0, Math.round((mevcutDusus / toplamDusus) * 100)));
-            return `
-          <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border2)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-              <span style="font-size:10px;color:var(--muted)">Hedefe %${yuzde} yaklaştın</span>
-              <span style="font-size:10px;color:var(--warning);font-weight:500">₺${(sonFiyat - hedefFiyat).toLocaleString('tr-TR')} kaldı</span>
-            </div>
-            <div style="height:3px;background:var(--border);border-radius:99px;overflow:hidden">
-              <div style="height:100%;width:${yuzde}%;background:var(--success);border-radius:99px;transition:width .3s"></div>
-            </div>
-          </div>`;
-          })() : ''}
+          <div style="height:3px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:6px">
+            <div style="height:100%;width:${progressYuzde}%;background:${onTarget?'var(--success)':'var(--warning)'};border-radius:99px"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:10px;color:var(--muted)">Hedefe %${progressYuzde} yaklaştın</span>
+            ${!onTarget && sonFiyat > hedefFiyat ? `<span style="font-size:10px;color:var(--warning);font-weight:500">₺${(sonFiyat-hedefFiyat).toLocaleString('tr-TR')} kaldı</span>` : ''}
+          </div>
+          ${!onTarget ? `<div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border2);font-size:11px;color:var(--muted)">
+            ${fmt(p.son_fiyat)} → <strong style="color:var(--text)">${fmt(p.hedef_fiyat)}</strong> — ${sonFiyat > hedefFiyat ? `₺${(sonFiyat-hedefFiyat).toLocaleString('tr-TR')} daha düşerse haber vereceğiz` : 'Hedefe ulaştı!'}
+          </div>` : ''}
         </div>
-      ` : ''}
-    `;
+      `;
+    } else {
+      // Hedef yoksa — hedef belirle prompt'u + boş progress bar
+      priceHTML += `
+        <div style="background:var(--bg);border-radius:10px;padding:10px 12px;border:0.5px solid var(--border2);cursor:pointer" onclick="showNotifSettings(${p.id},${!!p.bildirim_hedef},${!!p.bildirim_dusus})">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-size:11px">🎯</span>
+              <span style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Hedef belirle</span>
+            </div>
+            <span style="font-size:10px;color:var(--faint)">Ekle →</span>
+          </div>
+          <div style="height:3px;background:var(--border);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:0%;background:var(--warning);border-radius:99px"></div>
+          </div>
+        </div>
+      `;
+    }
   }
 
-  // Son kontrol zamanı
+  // ── YENİ BİLGİ SATIRI ──
+  let insightHTML = '';
+  if (hasFiyat) {
+    const updatedAt = p.updated_at ? new Date(p.updated_at) : null;
+    const diffDays = updatedAt ? Math.floor((Date.now() - updatedAt.getTime()) / 86400000) : null;
+    if (onTarget) {
+      insightHTML = `<div style="font-size:11px;color:var(--success);margin-bottom:8px">✓ Hedef fiyatına ulaştı — almak için doğru an</div>`;
+    } else if (drop && ilkFiyat) {
+      const dusus = ilkFiyat - sonFiyat;
+      insightHTML = `<div style="font-size:11px;color:var(--success);margin-bottom:8px">↓ ₺${dusus.toLocaleString('tr-TR')} düştü — takipten beri</div>`;
+    } else if (diffDays !== null && diffDays < 1) {
+      insightHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">✓ Bugün fiyat değişmedi</div>`;
+    } else if (diffDays !== null) {
+      insightHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">✓ ${diffDays} gündür fiyat stabil</div>`;
+    }
+  }
+
+  // ── SON KONTROL ──
   const lastCheck = p.updated_at ? (() => {
     const diff = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / 60000);
     if (diff < 1) return 'Az önce';
@@ -1796,30 +1843,28 @@ function cardHTML(p, context = 'products') {
     <!-- Fiyat -->
     ${priceHTML}
 
+    <!-- Yeni bilgi satırı -->
+    ${insightHTML ? `<div style="margin-top:10px">${insightHTML}</div>` : ''}
+
     <!-- Ayraç -->
     <div style="height:0.5px;background:var(--border);margin:12px 0"></div>
 
-    <!-- Ürüne git butonu -->
+    <!-- Ürüne git -->
     <a href="${safeUrl}" target="_blank" rel="noopener"
       style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;background:var(--bg);border:0.5px solid var(--border);border-radius:10px;text-decoration:none;color:var(--text);font-family:var(--sans);font-size:13px;font-weight:500;transition:background .15s"
       onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      ${hostname ? hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1) + "'e Git" : 'Ürüne Git'}
-    </a>
+      ${siteName}'e Git
     </a>
 
     <!-- Son kontrol + aksiyonlar -->
-    ${hasFiyat && drop ? `
-    <div style="font-size:11px;color:var(--success);background:var(--success-bg);padding:6px 10px;border-radius:8px;margin-bottom:8px;font-weight:500">
-      Son kontrolden beri ₺${(parsePrice(p.ilk_fiyat)-parsePrice(p.son_fiyat)).toLocaleString('tr-TR')} düştü
-    </div>` : ''}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
       <div style="font-size:10px;color:var(--faint)">${lastCheck ? `🕐 ${lastCheck}` : ''}</div>
       <div style="display:flex;gap:5px">
         <button class="btn-icon" aria-label="Fiyat geçmişi" onclick="showHistory(${p.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </button>
-        <button class="btn-icon ${p.satin_alindi?'':'shelf-btn'}" onclick="toggleShelf(${p.id},${!!p.satin_alindi})"
+        <button class="btn-icon" onclick="toggleShelf(${p.id},${!!p.satin_alindi})"
           style="${p.satin_alindi?'background:var(--success-bg);border-color:transparent':''}"
           aria-label="Satın aldım">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${p.satin_alindi?'var(--success)':'currentColor'}" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1847,7 +1892,7 @@ function cardHTML(p, context = 'products') {
     </div>
   </div>`;
 }
-// Notifications
+ // Notifications
 function renderNotifications() {
   const el      = document.getElementById('notif-list');
   const drops   = allProducts.filter(p=>!p.satin_alindi&&p.ilk_fiyat&&p.son_fiyat&&parsePrice(p.son_fiyat)<parsePrice(p.ilk_fiyat));
