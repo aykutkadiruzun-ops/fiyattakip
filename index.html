@@ -1857,11 +1857,6 @@ function renderCollections() {
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      ${preview.length ? `<div class="col-preview">${preview.map(p => `
-        <div class="col-preview-item">
-          <div class="col-preview-name">${p.urun_adi||'Ürün'}</div>
-          <div class="col-preview-price ${(p.ilk_fiyat && p.son_fiyat && parsePrice(p.son_fiyat) < parsePrice(p.ilk_fiyat)) ? 'down' : ''}">${fmt(p.son_fiyat)||'—'}</div>
-        </div>`).join('')}</div>` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-top:10px;border-top:0.5px solid var(--border2);margin-top:4px">
         <div style="background:var(--bg);border-radius:8px;padding:8px 10px;border:0.5px solid var(--border2)">
           <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Toplam değer</div>
