@@ -1058,12 +1058,15 @@
     </div>
 
     <!-- ADIM 4: Hata -->
+    <!-- ADIM 4: Kaydedildi -->
     <div id="modal-step-4" style="display:none;text-align:center;padding:24px 0">
-      <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-      <div style="font-family:var(--serif);font-size:18px;color:var(--text);margin-bottom:8px">Ürün bilgisi alınamadı</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">Ürün rafa eklendi ama bilgileri<br>bir sonraki kontrolde güncellenecek.</div>
+      <div style="width:52px;height:52px;background:var(--success-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="font-family:var(--serif);font-size:20px;color:var(--text);margin-bottom:8px">Rafta'ya kaydedildi.</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.7">Artık bu ürünü senin yerine takip ediyoruz.<br>İlk fiyat kontrolü tamamlandığında<br>sana haber vereceğiz.</div>
       <div class="field" style="text-align:left">
-        <label>Hedef fiyat (opsiyonel)</label>
+        <label>Hedef fiyat belirle (opsiyonel)</label>
         <input type="number" id="new-target-fallback" placeholder="örn. 450" min="0" step="0.01"
           style="width:100%;padding:13px 14px;border:0.5px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:16px;color:var(--text);background:var(--surface);outline:none" />
       </div>
