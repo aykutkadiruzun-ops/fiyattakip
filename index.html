@@ -1460,7 +1460,23 @@ sb.auth.onAuthStateChange((_e, session) => {
 window.goBack = () => {
   if (pageHistory.length > 1) {
     pageHistory.pop();
-    goPage(pageHistory.pop());
+    const prev = pageHistory[pageHistory.length - 1];
+    hideToast();
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.more-menu').forEach(closeProductMenu);
+    clearRenderedProductLists();
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn:not(.center-btn)').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-'+prev)?.classList.add('active');
+    document.getElementById('nav-'+prev)?.classList.add('active');
+    const backBtn = document.getElementById('topbar-back');
+    if (backBtn) backBtn.style.display = prev === 'home' ? 'none' : '';
+    if (prev==='products')         renderAllProducts();
+    if (prev==='notifications')    renderNotifications();
+    if (prev==='shelf')            renderShelf();
+    if (prev==='collections')      renderCollections();
+    if (prev==='stats')            renderStats();
+    if (prev==='collection-detail') renderCollectionDetail();
   }
 };
 
