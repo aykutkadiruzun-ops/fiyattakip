@@ -769,15 +769,15 @@
     <input type="url" id="quick-url" placeholder="Ürün linkini buraya yapıştır"
       style="flex:1;padding:10px 12px;border:0.5px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:13px;color:var(--text);background:var(--bg);outline:none"
       onkeydown="if(event.key==='Enter')quickAdd()" />
-    <button onclick="quickAdd()"
-      style="padding:10px 14px;background:var(--text);color:var(--bg);border:none;border-radius:9px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">
+    <button id="quick-add-btn" onclick="quickAdd()"
+      style="padding:10px 14px;background:var(--faint);color:var(--bg);border:none;border-radius:9px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .2s">
       Fiyatı Takip Et
     </button>
   </div>
 </div>
     <div class="greeting">
       <div class="page-eyebrow" id="home-date"></div>
-      <div class="page-title">Fiyatlar takipte,<br><em>sen rahat ol.</em></div>
+      <div class="page-title">Fiyatlar takipte.<br><em>Sekmeyi kapat, Rafta hatırlar.</em></div>
     </div>
 
     <div class="metrics-row" style="margin-top:20px">
