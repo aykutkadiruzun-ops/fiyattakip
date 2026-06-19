@@ -1001,33 +1001,77 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-product-title">
     <button class="modal-close" type="button" onclick="closeModal()" aria-label="Ürün ekleme penceresini kapat">×</button>
     <div class="modal-handle"></div>
-    <h3 id="add-product-title">Ürün takibe al</h3>
-    <div class="field"><label>Ürün linki</label><input type="url" id="new-url" placeholder="Trendyol, Bershka, Zara, H&M…" /></div>
-    <div class="field"><label>Hedef fiyat (₺)</label><input type="number" id="new-target" placeholder="örn. 450" min="0" step="0.01" /></div>
-    <div class="field">
-      <label>Koleksiyon (opsiyonel)</label>
-      <input type="text" id="new-koleksiyon" placeholder="örn. Yaz koleksiyonu, ev dekorasyonu…" list="koleksiyon-list" />
-      <datalist id="koleksiyon-list"></datalist>
-    </div>
-    <div class="field">
-      <label>Bildirim tercihleri</label>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:400;color:var(--text)">
-          <input type="checkbox" id="notif-hedef" checked style="width:16px;height:16px;accent-color:var(--text)" />
-          Hedefe ulaşınca bildir
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:400;color:var(--text)">
-          <input type="checkbox" id="notif-dusus" style="width:16px;height:16px;accent-color:var(--text)" />
-          Fiyat her düştüğünde bildir
-        </label>
+
+    <!-- ADIM 1: Link + ayarlar -->
+    <div id="modal-step-1">
+      <h3 id="add-product-title">Rafına ekle</h3>
+      <div class="field"><label>Ürün linki</label><input type="url" id="new-url" placeholder="Trendyol, Bershka, Zara, H&M…" /></div>
+      <div class="field">
+        <label>Koleksiyon (opsiyonel)</label>
+        <input type="text" id="new-koleksiyon" placeholder="örn. Yaz koleksiyonu…" list="koleksiyon-list" />
+        <datalist id="koleksiyon-list"></datalist>
       </div>
+      <div class="field">
+        <label>Bildirim tercihleri</label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:400;color:var(--text)">
+            <input type="checkbox" id="notif-hedef" checked style="width:16px;height:16px;accent-color:var(--text)" />
+            Hedefe ulaşınca bildir
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:400;color:var(--text)">
+            <input type="checkbox" id="notif-dusus" style="width:16px;height:16px;accent-color:var(--text)" />
+            Fiyat her düştüğünde bildir
+          </label>
+        </div>
+      </div>
+      <button class="btn-primary" id="btn-add" onclick="addProduct()" style="background:var(--text);color:var(--bg)">Rafta'ya Kaydet</button>
     </div>
-    <button class="btn-primary" id="btn-add" onclick="addProduct()" style="background:var(--text);color:var(--bg)">Rafta takibe al</button>
+
+    <!-- ADIM 2: Loading -->
+    <div id="modal-step-2" style="display:none;text-align:center;padding:32px 0">
+      <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 16px"></div>
+      <div style="font-family:var(--serif);font-size:18px;color:var(--text);margin-bottom:8px">Ürün bilgileri alınıyor…</div>
+      <div style="font-size:12px;color:var(--muted)">Birkaç saniye sürebilir</div>
+    </div>
+
+    <!-- ADIM 3: WOW -->
+    <div id="modal-step-3" style="display:none">
+      <div style="background:var(--success-bg);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:6px;margin-bottom:20px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span style="font-size:12px;font-weight:500;color:var(--success)">Ürün bulundu</span>
+      </div>
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:14px;padding:18px;margin-bottom:20px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px" id="wow-site"></div>
+        <div style="font-family:var(--serif);font-size:17px;color:var(--text);margin-bottom:10px;line-height:1.3" id="wow-name"></div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Şu an</div>
+        <div style="font-family:var(--serif);font-size:28px;color:var(--text);letter-spacing:-0.5px" id="wow-price"></div>
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:10px">Bu ürünü kaç ₺ olunca almak istersin?</div>
+        <input type="number" id="new-target" placeholder="örn. 450" min="0" step="0.01"
+          style="width:100%;padding:13px 14px;border:0.5px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:16px;color:var(--text);background:var(--surface);outline:none"
+          onfocus="this.style.borderColor='var(--muted)'" onblur="this.style.borderColor='var(--border)'"
+          onkeydown="if(event.key==='Enter')saveTarget()" />
+      </div>
+      <button class="btn-primary" onclick="saveTarget()" style="background:var(--text);color:var(--bg)">Kaydet</button>
+      <button onclick="saveTarget(true)" style="width:100%;padding:11px;background:transparent;color:var(--muted);border:none;font-family:var(--sans);font-size:13px;cursor:pointer;margin-top:8px">Hedef fiyat olmadan takip et</button>
+    </div>
+
+    <!-- ADIM 4: Hata -->
+    <div id="modal-step-4" style="display:none;text-align:center;padding:24px 0">
+      <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+      <div style="font-family:var(--serif);font-size:18px;color:var(--text);margin-bottom:8px">Ürün bilgisi alınamadı</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">Ürün rafa eklendi ama bilgileri<br>bir sonraki kontrolde güncellenecek.</div>
+      <div class="field" style="text-align:left">
+        <label>Hedef fiyat (opsiyonel)</label>
+        <input type="number" id="new-target-fallback" placeholder="örn. 450" min="0" step="0.01"
+          style="width:100%;padding:13px 14px;border:0.5px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:16px;color:var(--text);background:var(--surface);outline:none" />
+      </div>
+      <button class="btn-primary" onclick="saveFallbackTarget()" style="background:var(--text);color:var(--bg)">Tamam</button>
+    </div>
+
   </div>
-</div>
-
-<!-- MODAL: YENİ KOLEKSİYON -->
-
+  
 <!-- MODAL: YENİ KOLEKSİYON -->
 <div class="modal-overlay" id="new-collection-overlay" onclick="closeNewCollectionOutside(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="new-collection-title" style="padding-bottom:36px">
@@ -1532,9 +1576,23 @@ window.openModal  = () => {
   document.getElementById('modal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('new-url')?.focus(), 150);
 };
-window.closeModal = () => document.getElementById('modal-overlay').classList.remove('open');
+window.closeModal = () => {
+  document.getElementById('modal-overlay').classList.remove('open');
+  setTimeout(() => {
+    document.getElementById('modal-step-1').style.display = '';
+    document.getElementById('modal-step-2').style.display = 'none';
+    document.getElementById('modal-step-3').style.display = 'none';
+    document.getElementById('modal-step-4').style.display = 'none';
+    document.getElementById('new-url').value = '';
+    document.getElementById('new-koleksiyon').value = '';
+    document.getElementById('new-target').value = '';
+    document.getElementById('notif-hedef').checked = true;
+    document.getElementById('notif-dusus').checked = false;
+    currentAddedId = null;
+  }, 300);
+};
 window.closeModalOutside = e => { if(e.target.id==='modal-overlay') closeModal(); };
-
+  
 // Load
 async function loadProducts() {
   if (!currentUser) return;
@@ -1831,9 +1889,10 @@ function validateProductUrl(rawUrl) {
   return { ok:true, url: normalizeProductUrl(parsed) };
 }
 
+let currentAddedId = null;
+
 window.addProduct = async () => {
   const rawUrl = document.getElementById('new-url').value.trim();
-  const target = document.getElementById('new-target').value.trim();
   const validation = validateProductUrl(rawUrl);
   if (!validation.ok) { showToast(validation.message,'error'); return; }
   const url = validation.url;
@@ -1842,22 +1901,81 @@ window.addProduct = async () => {
   const koleksiyon = document.getElementById('new-koleksiyon').value.trim();
   const notifHedef = document.getElementById('notif-hedef').checked;
   const notifDusus = document.getElementById('notif-dusus').checked;
-  const { error } = await sb.from('urunler').insert([{
+
+  // DB'ye kaydet
+  const { data, error } = await sb.from('urunler').insert([{
     url, email: currentUser.email,
-    hedef_fiyat: target ? parseFloat(target) : null,
+    hedef_fiyat: null,
     urun_adi: null, koleksiyon: koleksiyon || null,
     bildirim_hedef: notifHedef, bildirim_dusus: notifDusus,
-  }]);
-  btn.innerHTML='Rafta takibe al'; btn.disabled=false;
+  }]).select().single();
+
+  btn.innerHTML='Rafta\'ya Kaydet'; btn.disabled=false;
   if (error) { showToast('Eklenemedi: '+error.message,'error'); return; }
-  document.getElementById('new-url').value='';
-  document.getElementById('new-target').value='';
-  document.getElementById('new-koleksiyon').value='';
-  document.getElementById('notif-hedef').checked=true;
-  document.getElementById('notif-dusus').checked=false;
+
+  currentAddedId = data.id;
+
+  // Adım 2: Loading
+  document.getElementById('modal-step-1').style.display = 'none';
+  document.getElementById('modal-step-2').style.display = 'block';
+
+  // Edge Function'a istek at
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || SUPABASE_ANON;
+    const res = await fetch('https://uwxfrbljvmwtxecnqgrl.supabase.co/functions/v1/fiyat-guncelle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_ANON },
+      body: JSON.stringify({ urun_id: currentAddedId })
+    });
+    const result = await res.json();
+
+    if (result.success || result.urun_adi || result.son_fiyat) {
+      // Güncel veriyi çek
+      const { data: urun } = await sb.from('urunler').select('*').eq('id', currentAddedId).single();
+      if (urun && urun.urun_adi && urun.son_fiyat) {
+        // WOW ekranı
+        const hostname = (() => { try { return new URL(url).hostname.replace('www.',''); } catch(e) { return url; } })();
+        document.getElementById('wow-site').textContent = hostname;
+        document.getElementById('wow-name').textContent = urun.urun_adi;
+        document.getElementById('wow-price').textContent = fmt(urun.son_fiyat);
+        document.getElementById('modal-step-2').style.display = 'none';
+        document.getElementById('modal-step-3').style.display = 'block';
+        await loadProducts();
+        return;
+      }
+    }
+    // Başarısız — fallback
+    throw new Error('no data');
+  } catch(e) {
+    document.getElementById('modal-step-2').style.display = 'none';
+    document.getElementById('modal-step-4').style.display = 'block';
+    await loadProducts();
+  }
+};
+
+window.saveTarget = async (skip = false) => {
+  if (!currentAddedId) { closeModal(); return; }
+  const val = skip ? null : document.getElementById('new-target').value.trim();
+  if (val) {
+    await sb.from('urunler').update({ hedef_fiyat: parseFloat(val) }).eq('id', currentAddedId);
+  }
+  currentAddedId = null;
+  closeModal();
+  showToast('Ürün rafa eklendi! 🎉','success');
+  await loadProducts();
+};
+
+window.saveFallbackTarget = async () => {
+  if (!currentAddedId) { closeModal(); return; }
+  const val = document.getElementById('new-target-fallback').value.trim();
+  if (val) {
+    await sb.from('urunler').update({ hedef_fiyat: parseFloat(val) }).eq('id', currentAddedId);
+  }
+  currentAddedId = null;
   closeModal();
   showToast('Ürün rafa eklendi!','success');
-  loadProducts();
+  await loadProducts();
 };
 
 // Toggle shelf
