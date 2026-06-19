@@ -1004,13 +1004,6 @@
         </label>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:400;color:var(--text)">
           <input type="checkbox" id="notif-dusus" style="width:16px;height:16px;accent-color:var(--text)" />
-          Fiyat her düştüğünde bildir
-        </label>
-      </div>
-    </div>
-    <button class="btn-primary" id="btn-add" onclick="addProduct()" style="background:var(--text);color:var(--bg)">Rafta takibe al</button>
-  </div>
-</div>
 
 <!-- MODAL: YENİ KOLEKSİYON -->
 <div class="modal-overlay" id="new-collection-overlay" onclick="closeNewCollectionOutside(event)">
@@ -2085,7 +2078,7 @@ window.toggleHedefFiyatField = () => {
   wrap.style.display = checked && !urun?.hedef_fiyat ? '' : 'none';
 };
 
-wwindow.saveNotifSettings = async () => {
+ window.saveNotifSettings = async () => {
   const hedef = document.getElementById('notif-settings-hedef').checked;
   const dusus = document.getElementById('notif-settings-dusus').checked;
   const urun = allProducts.find(p => p.id === notifSettingsId);
