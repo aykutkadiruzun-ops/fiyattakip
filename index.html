@@ -1740,12 +1740,13 @@ function cardHTML(p, context = 'products') {
       kanit = `Bugün fiyat değişmedi.`;
     }
 
-    statusHTML = `<div style="padding:7px 10px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <span>🟢</span>
-        <span style="font-size:11px;font-weight:500;color:var(--muted)">Beklemek mantıklı</span>
+    statusHTML = `<div style="padding:8px 12px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);margin-bottom:12px">
+      <div style="font-size:9px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">Rafta Yorumu</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+        <span style="font-size:11px">🟢</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text)">Beklemek mantıklı</span>
       </div>
-      <div style="font-size:10px;color:var(--faint);padding-left:19px">${kanit}</div>
+      <div style="font-size:11px;color:var(--muted);padding-left:19px">${kanit}</div>
     </div>`;
   }
 
