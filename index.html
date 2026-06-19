@@ -773,7 +773,7 @@
       style="flex:1;border:none;background:transparent;font-family:var(--sans);font-size:15px;color:var(--text);outline:none;padding:10px 0" />
     <button id="quick-add-btn" onclick="quickAdd()"
       style="flex-shrink:0;padding:10px 18px;background:transparent;color:var(--faint);border:none;border-radius:12px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap">
-      Takip Et
+      Rafa Kaldır
     </button>
   </div>
 </div>
@@ -1662,7 +1662,10 @@ function cardHTML(p, context = 'products') {
     <div class="pc-header">
       <div class="pc-info">
         <div class="pc-name">${safeName}</div>
-        <a class="pc-url" href="${safeUrl}" target="_blank" rel="noopener">${safeHost}</a>
+        <a class="pc-url" href="${safeUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);font-weight:500;text-decoration:none;background:var(--border2);padding:2px 7px;border-radius:99px;margin-top:2px">
+  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+  ${safeHost}
+</a>
         ${pendingNote}
         ${p.updated_at ? `<div style="font-size:10px;color:var(--faint);margin-top:2px">${new Date(p.updated_at).toLocaleDateString('tr-TR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
         ${p.guncelleme_istegi ? `<div style="font-size:10px;color:var(--warning);margin-top:2px">Güncelleme bekleniyor…</div>` : ''}
