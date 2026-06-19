@@ -1073,13 +1073,21 @@
     <button class="modal-close" type="button" onclick="document.getElementById('notif-settings-overlay').classList.remove('open')" aria-label="Bildirim ayarlarını kapat">×</button>
     <div class="modal-handle"></div>
     <h3 id="notif-settings-title" style="margin-bottom:18px">Bildirim ayarları</h3>
-    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:22px">
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
       <label style="display:flex;align-items:center;gap:12px;cursor:pointer;font-size:14px;font-weight:400;color:var(--text)">
-        <input type="checkbox" id="notif-settings-hedef" style="width:18px;height:18px;accent-color:var(--text)" />
+        <input type="checkbox" id="notif-settings-hedef" style="width:18px;height:18px;accent-color:var(--text)" onchange="toggleHedefFiyatField()" />
         Hedefe ulaşınca bildir
       </label>
+      <div id="notif-settings-hedef-fiyat-wrap" style="display:none;margin-left:30px">
+        <input type="number" id="notif-settings-hedef-fiyat" placeholder="Hedef fiyat (₺)" min="0" step="0.01"
+          style="width:100%;padding:10px 12px;border:0.5px solid var(--border);border-radius:9px;font-family:var(--sans);font-size:13px;color:var(--text);background:var(--surface)" />
+      </div>
       <label style="display:flex;align-items:center;gap:12px;cursor:pointer;font-size:14px;font-weight:400;color:var(--text)">
         <input type="checkbox" id="notif-settings-dusus" style="width:18px;height:18px;accent-color:var(--text)" />
+        Fiyat her düştüğünde bildir
+      </label>
+    </div>
+    <button class="btn-primary" onclick="saveNotifSettings()" style="background:var(--text);color:var(--bg)">Kaydet</button>
         Fiyat her düştüğünde bildir
       </label>
     </div>
@@ -2062,7 +2070,19 @@ window.showNotifSettings = (id, hedef, dusus) => {
   notifSettingsId = id;
   document.getElementById('notif-settings-hedef').checked = hedef;
   document.getElementById('notif-settings-dusus').checked = dusus;
+  const urun = allProducts.find(p => p.id === id);
+  const hedefFiyatInput = document.getElementById('notif-settings-hedef-fiyat');
+  hedefFiyatInput.value = urun?.hedef_fiyat || '';
+  const wrap = document.getElementById('notif-settings-hedef-fiyat-wrap');
+  wrap.style.display = hedef && !urun?.hedef_fiyat ? '' : 'none';
   document.getElementById('notif-settings-overlay').classList.add('open');
+};
+
+window.toggleHedefFiyatField = () => {
+  const checked = document.getElementById('notif-settings-hedef').checked;
+  const urun = allProducts.find(p => p.id === notifSettingsId);
+  const wrap = document.getElementById('notif-settings-hedef-fiyat-wrap');
+  wrap.style.display = checked && !urun?.hedef_fiyat ? '' : 'none';
 };
 
 wwindow.saveNotifSettings = async () => {
