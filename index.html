@@ -1570,6 +1570,14 @@ function renderDashboard() {
   document.getElementById('stat-drop').textContent   = drops.length;
   document.getElementById('stat-target').textContent = targets.length;
   document.getElementById('stat-saving').textContent = saving.toLocaleString('tr-TR');
+  const savingTag = document.getElementById('saving-month-label');
+  if (savingTag) {
+    if (saving === 0) {
+      savingTag.parentElement.innerHTML = '<span style="font-size:11px;color:#666;line-height:1.6;font-weight:400">Henüz tasarrufun yok.<br>İlk ürününü kaydet.<br>Fiyat düştüğünde burada göreceksin.</span>';
+    } else {
+      savingTag.parentElement.innerHTML = '<strong id="saving-month-label">Bu ay</strong> fiyatlar takipte';
+    }
+  }
   if (drops.length||targets.length) document.getElementById('notif-dot').style.display='block';
 }
 
@@ -1578,7 +1586,7 @@ function renderHomeProducts() {
   const el   = document.getElementById('home-products');
   const list = allProducts.filter(p=>!p.satin_alindi).slice(0,3);
   if (!list.length) {
-    el.innerHTML=`<div class="empty"><div class="eicon">🛍️</div><p>Henüz takip ettiğin ürün yok.<br>+ butonuna basarak ekleyebilirsin.</p></div>`;
+    el.innerHTML=`<div class="empty"><div class="eicon">🛍️</div><p>Henüz ürün eklemedin.<br>İlk ürününü eklediğinde burada<br>fiyat değişimleri görünecek.</p></div>`;
     return;
   }
   el.innerHTML = list.map(p => cardHTML(p, 'home')).join('');
@@ -1609,7 +1617,9 @@ function renderAllProducts() {
 
   document.getElementById('product-count').textContent = list.length + ' ürün';
   el.innerHTML = list.length ? list.map(p => cardHTML(p, 'products')).join('') :
-    `<div class="empty"><div class="eicon">📦</div><p>Ürün bulunamadı.</p></div>`;
+    allProducts.filter(p=>!p.satin_alindi).length === 0
+    ? `<div class="empty"><div class="eicon">🛍️</div><p>Henüz ürün eklemedin.<br>İlk ürününü eklediğinde burada<br>fiyat değişimleri görünecek.</p></div>`
+    : `<div class="empty"><div class="eicon">📦</div><p>Ürün bulunamadı.</p></div>`;
 }
 
 // Card HTML
