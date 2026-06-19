@@ -2065,10 +2065,13 @@ window.showNotifSettings = (id, hedef, dusus) => {
   document.getElementById('notif-settings-overlay').classList.add('open');
 };
 
-window.saveNotifSettings = async () => {
+wwindow.saveNotifSettings = async () => {
   const hedef = document.getElementById('notif-settings-hedef').checked;
   const dusus = document.getElementById('notif-settings-dusus').checked;
-  const { error } = await sb.from('urunler').update({ bildirim_hedef: hedef, bildirim_dusus: dusus }).eq('id', notifSettingsId);
+  const urun = allProducts.find(p => p.id === notifSettingsId);
+  const hedefFiyatVal = document.getElementById('notif-settings-hedef-fiyat').value.trim();
+  const yeniHedefFiyat = hedef && !urun?.hedef_fiyat && hedefFiyatVal ? parseFloat(hedefFiyatVal) : urun?.hedef_fiyat || null;
+  const { error } = await sb.from('urunler').update({ bildirim_hedef: hedef, bildirim_dusus: dusus, hedef_fiyat: yeniHedefFiyat }).eq('id', notifSettingsId);
   if (error) { showToast('Hata.','error'); return; }
   document.getElementById('notif-settings-overlay').classList.remove('open');
   showToast('Bildirim ayarları kaydedildi','success');
