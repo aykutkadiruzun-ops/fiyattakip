@@ -662,19 +662,98 @@ def gecmise_kaydet(urun_id: Any, fiyat: str) -> None:
         print("Fiyat gecmisi yazilamadi:", e)
 
 
-def email_gonder(email: str, urun_adi: str, eski_fiyat: Any, yeni_fiyat: str, url: str) -> None:
+def _compact_product_name(name: Any, limit: int = 58) -> str:
+    text = re.sub(r"\s+", " ", str(name or "Ürün")).strip() or "Ürün"
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _format_whole_tl(value: Optional[float]) -> str:
+    if value is None:
+        return ""
+    return f"{round(value):,}".replace(",", ".") + " TL"
+
+
+def build_notification_content(
+    event_type: str,
+    urun_adi: str,
+    eski_fiyat: Any,
+    yeni_fiyat: str,
+    url: str,
+    hedef_fiyat: Any = None,
+) -> Dict[str, str]:
+    """Build attention-focused email/push copy for Rafta price events."""
+    product = _compact_product_name(urun_adi)
+    safe_product = html_lib.escape(product)
+    safe_url = html_lib.escape(url or "https://rafta.net")
+    old_num = parse_price(eski_fiyat)
+    new_num = parse_price(yeni_fiyat)
+    target_num = parse_price(hedef_fiyat)
+    saving = (old_num - new_num) if old_num is not None and new_num is not None and old_num > new_num else None
+    saving_text = _format_whole_tl(saving) if saving else ""
+    percent_text = f"{round((saving / old_num) * 100)}%" if saving and old_num else ""
+    old_text = html_lib.escape(str(eski_fiyat or "-"))
+    new_text = html_lib.escape(str(yeni_fiyat or "-"))
+    target_text = html_lib.escape(str(hedef_fiyat or (format_price(target_num) if target_num else "")))
+    remaining_to_target = (new_num - target_num) if new_num is not None and target_num is not None and new_num > target_num else None
+    remaining_text = _format_whole_tl(remaining_to_target) if remaining_to_target else ""
+
+    if event_type == "target_reached":
+        subject = f"🎯 Beklediğin an geldi: {product}"
+        push_title = "🎯 Beklediğin an geldi"
+        push_body = f"{product} artık hedef fiyatında. Güncel fiyat: {yeni_fiyat}."
+        headline = "Beklediğin an geldi"
+        kicker = "Ürün artık istediğin fiyatta. Sakin ve veriye dayalı bir bildirim: şimdi tekrar bakmaya değer."
+        insight = "Ürün artık istediğin fiyatta"
+        cta = "Ürünü kontrol et"
+    else:
+        subject = f"📉 Güzel haber: {product} {saving_text} ucuzladı" if saving_text else f"📉 Güzel haber: {product} biraz daha ucuzladı"
+        push_title = "📉 Güzel haber"
+        push_body = f"{product} bugün {saving_text} düştü." if saving_text else f"{product} biraz daha ucuzladı."
+        if remaining_text:
+            push_body += f" Hedef fiyatına {remaining_text} kaldı."
+        elif saving_text and percent_text:
+            push_body += f" Değişim: {percent_text}."
+        headline = "Güzel haber"
+        kicker = f"Kaydettiğin ürün bugün {saving_text} ucuzladı." if saving_text else "Kaydettiğin ürün biraz daha ucuzladı."
+        insight = f"Hedef fiyatına {remaining_text} kaldı" if remaining_text else "Bugün tekrar bakmaya değer"
+        cta = "Ürünü kontrol et"
+
+    html_body = f"""
+    <div style="margin:0;padding:0;background:#FAFAF8;font-family:Inter,Arial,sans-serif;color:#111">
+      <div style="max-width:560px;margin:0 auto;padding:28px 18px">
+        <div style="font-size:24px;font-weight:700;margin-bottom:18px">rafta<span style="color:#888">.</span></div>
+        <div style="background:#fff;border:1px solid #E8E6DF;border-radius:20px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.04)">
+          <div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:10px">{html_lib.escape(headline)}</div>
+          <h1 style="font-size:26px;line-height:1.15;margin:0 0 10px">{safe_product}</h1>
+          <p style="font-size:15px;line-height:1.55;color:#555;margin:0 0 22px">{html_lib.escape(kicker)}</p>
+          <div style="display:flex;gap:12px;margin:0 0 22px;flex-wrap:wrap">
+            <div style="flex:1;min-width:150px;background:#FDF0EE;border-radius:14px;padding:14px">
+              <div style="font-size:11px;color:#9A625C;text-transform:uppercase;letter-spacing:.06em">Önce</div>
+              <div style="font-size:18px;color:#9A625C;text-decoration:line-through">{old_text}</div>
+            </div>
+            <div style="flex:1;min-width:150px;background:#EBF4E5;border-radius:14px;padding:14px">
+              <div style="font-size:11px;color:#2D6A2D;text-transform:uppercase;letter-spacing:.06em">Şimdi</div>
+              <div style="font-size:24px;font-weight:800;color:#2D6A2D">{new_text}</div>
+            </div>
+          </div>
+          <div style="background:#F6F3EA;color:#3A3428;border-radius:14px;padding:12px 14px;margin-bottom:22px;font-size:14px">{html_lib.escape(insight)}</div>
+          {f'<div style="background:#111;color:#fff;border-radius:14px;padding:12px 14px;margin-bottom:22px;font-size:14px">Veri: <b>{html_lib.escape(saving_text)}</b>{(" · " + html_lib.escape(percent_text)) if percent_text else ""}</div>' if saving_text else ''}
+          {f'<div style="background:#FAEEDA;color:#7A4A0C;border-radius:14px;padding:12px 14px;margin-bottom:22px;font-size:14px">Hedef fiyat: <b>{target_text}</b></div>' if event_type == 'target_reached' and target_text else ''}
+          <a href="{safe_url}" style="display:block;text-align:center;background:#111;color:#fff;text-decoration:none;padding:15px 18px;border-radius:14px;font-weight:700">{html_lib.escape(cta)}</a>
+          <p style="font-size:12px;color:#888;line-height:1.5;margin:18px 0 0">Bu bildirim Rafta fiyat takip tercihlerine göre gönderildi.</p>
+        </div>
+      </div>
+    </div>
+    """.strip()
+    return {"subject": subject, "html": html_body, "push_title": push_title, "push_body": push_body}
+
+
+def email_gonder(email: str, urun_adi: str, eski_fiyat: Any, yeni_fiyat: str, url: str, event_type: str = "price_drop", hedef_fiyat: Any = None) -> None:
     if not RESEND_KEY:
         print("RESEND_KEY yok; email atlandi")
         return
-    safe_name = html_lib.escape(urun_adi or "Ürün")
-    safe_url = html_lib.escape(url)
-    html_body = (
-        f"<h2>Fiyat düştü!</h2><p><b>{safe_name}</b> fiyatı değişti.</p>"
-        f"<p>Eski fiyat: <s>{html_lib.escape(str(eski_fiyat or '-'))}</s></p>"
-        f"<p>Yeni fiyat: <b style='color:green'>{html_lib.escape(str(yeni_fiyat))}</b></p>"
-        f"<a href='{safe_url}' style='background:#111;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px'>Ürüne Git</a>"
-    )
-    data = {"from": "bildirim@rafta.net", "to": email, "subject": "Fiyat düştü: " + (urun_adi or "Ürün"), "html": html_body}
+    content = build_notification_content(event_type, urun_adi, eski_fiyat, yeni_fiyat, url, hedef_fiyat)
+    data = {"from": "bildirim@rafta.net", "to": email, "subject": content["subject"], "html": content["html"]}
     req = urllib.request.Request(
         "https://api.resend.com/emails",
         data=json.dumps(data).encode("utf-8"),
@@ -819,8 +898,9 @@ def kontrol_et(urun: Dict[str, Any]) -> None:
     if email and fiyat_dustu and urun.get("bildirim_dusus", False):
         event_key = notification_event_key(urun_id, "price_drop", yeni_sayi)
         if should_send_notification(urun_id, "price_drop", event_key):
-            email_gonder(email, yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url)
-            push_gonder(email, "Fiyat düştü!", f"{yeni_adi or 'Ürün'}: {yeni_fiyat}", url)
+            content = build_notification_content("price_drop", yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url)
+            email_gonder(email, yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url, event_type="price_drop")
+            push_gonder(email, content["push_title"], content["push_body"], url)
             log_notification(urun_id, email, "price_drop", event_key, yeni_fiyat)
         else:
             print("Fiyat dususu bildirimi daha once gonderilmis, atlandi:", event_key)
@@ -828,8 +908,9 @@ def kontrol_et(urun: Dict[str, Any]) -> None:
     if email and hedef_fiyat and yeni_sayi and yeni_sayi <= hedef_fiyat and urun.get("bildirim_hedef", True):
         event_key = notification_event_key(urun_id, "target_reached", hedef_fiyat)
         if should_send_notification(urun_id, "target_reached", event_key):
-            email_gonder(email, yeni_adi or "Ürün", eski_fiyat or "-", yeni_fiyat + " (hedef fiyata ulaşıldı)", url)
-            push_gonder(email, "Hedefe ulaştı!", f"{yeni_adi or 'Ürün'} hedef fiyata ulaştı: {yeni_fiyat}", url)
+            content = build_notification_content("target_reached", yeni_adi or "Ürün", eski_fiyat or "-", yeni_fiyat, url, hedef_fiyat=urun.get("hedef_fiyat"))
+            email_gonder(email, yeni_adi or "Ürün", eski_fiyat or "-", yeni_fiyat, url, event_type="target_reached", hedef_fiyat=urun.get("hedef_fiyat"))
+            push_gonder(email, content["push_title"], content["push_body"], url)
             log_notification(urun_id, email, "target_reached", event_key, yeni_fiyat)
         else:
             print("Hedef bildirimi daha once gonderilmis, atlandi:", event_key)
