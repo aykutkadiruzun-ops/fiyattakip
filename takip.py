@@ -112,6 +112,19 @@ def format_price(value: float) -> str:
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " TL"
 
 
+def price_drop_percent(eski_fiyat: Any, yeni_fiyat: Any) -> Optional[float]:
+    old_num = parse_price(eski_fiyat)
+    new_num = parse_price(yeni_fiyat)
+    if old_num is None or new_num is None or old_num <= 0 or new_num >= old_num:
+        return None
+    return ((old_num - new_num) / old_num) * 100
+
+
+def is_significant_price_drop(eski_fiyat: Any, yeni_fiyat: Any) -> bool:
+    # Kullanıcı tercihi: yüzde eşiği yok. Gerçek düşüş varsa bildirim adayıdır.
+    return price_drop_percent(eski_fiyat, yeni_fiyat) is not None
+
+
 def normalize_url(url: str) -> str:
     url = (url or "").strip()
     if not url:
@@ -670,7 +683,9 @@ def _compact_product_name(name: Any, limit: int = 58) -> str:
 def _format_whole_tl(value: Optional[float]) -> str:
     if value is None:
         return ""
-    return f"{round(value):,}".replace(",", ".") + " TL"
+    if abs(value - round(value)) < 0.005:
+        return f"{round(value):,}".replace(",", ".") + " TL"
+    return format_price(value)
 
 
 def build_notification_content(
@@ -690,14 +705,26 @@ def build_notification_content(
     target_num = parse_price(hedef_fiyat)
     saving = (old_num - new_num) if old_num is not None and new_num is not None and old_num > new_num else None
     saving_text = _format_whole_tl(saving) if saving else ""
-    percent_text = f"{round((saving / old_num) * 100)}%" if saving and old_num else ""
+    if saving and old_num:
+        pct = round((saving / old_num) * 100)
+        percent_text = f"{pct}%" if pct >= 1 else ""
+    else:
+        percent_text = ""
     old_text = html_lib.escape(str(eski_fiyat or "-"))
     new_text = html_lib.escape(str(yeni_fiyat or "-"))
     target_text = html_lib.escape(str(hedef_fiyat or (format_price(target_num) if target_num else "")))
     remaining_to_target = (new_num - target_num) if new_num is not None and target_num is not None and new_num > target_num else None
     remaining_text = _format_whole_tl(remaining_to_target) if remaining_to_target else ""
 
-    if event_type == "target_reached":
+    if event_type == "initial_price":
+        subject = f"🎉 Takip başladı: {product}"
+        push_title = "🎉 Takip başladı"
+        push_body = f"{product} artık takipte. İlk fiyat: {yeni_fiyat}."
+        headline = "Takip başladı"
+        kicker = "Artık bu ürünü senin yerine takip ediyoruz. Fiyat değiştiğinde sakin ve veriye dayalı şekilde haber vereceğiz."
+        insight = "Artık bu ürünü senin yerine takip ediyoruz"
+        cta = "Ürünü görüntüle"
+    elif event_type == "target_reached":
         subject = f"🎯 Beklediğin an geldi: {product}"
         push_title = "🎯 Beklediğin an geldi"
         push_body = f"{product} artık hedef fiyatında. Güncel fiyat: {yeni_fiyat}."
@@ -892,14 +919,25 @@ def kontrol_et(urun: Dict[str, Any]) -> None:
     print("Guncellendi:", eski_fiyat, "->", yeni_fiyat, "mode=", mode)
 
     eski_sayi = parse_price(eski_fiyat)
-    fiyat_dustu = eski_sayi is not None and yeni_sayi is not None and yeni_sayi < eski_sayi
+    ilk_fiyat_alindi = eski_sayi is None and yeni_sayi is not None
+    fiyat_dustu = is_significant_price_drop(eski_fiyat, yeni_fiyat)
     hedef_fiyat = parse_price(urun.get("hedef_fiyat"))
+
+    if email and ilk_fiyat_alindi:
+        event_key = notification_event_key(urun_id, "initial_price", yeni_sayi)
+        if should_send_notification(urun_id, "initial_price", event_key):
+            content = build_notification_content("initial_price", yeni_adi or "Ürün", None, yeni_fiyat, url)
+            email_gonder(email, yeni_adi or "Ürün", None, yeni_fiyat, url, event_type="initial_price")
+            push_gonder(email, content["push_title"], content["push_body"], url)
+            log_notification(urun_id, email, "initial_price", event_key, yeni_fiyat)
+        else:
+            print("Ilk fiyat bildirimi daha once gonderilmis, atlandi:", event_key)
 
     if email and fiyat_dustu and urun.get("bildirim_dusus", False):
         event_key = notification_event_key(urun_id, "price_drop", yeni_sayi)
         if should_send_notification(urun_id, "price_drop", event_key):
-            content = build_notification_content("price_drop", yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url)
-            email_gonder(email, yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url, event_type="price_drop")
+            content = build_notification_content("price_drop", yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url, hedef_fiyat=urun.get("hedef_fiyat"))
+            email_gonder(email, yeni_adi or "Ürün", eski_fiyat, yeni_fiyat, url, event_type="price_drop", hedef_fiyat=urun.get("hedef_fiyat"))
             push_gonder(email, content["push_title"], content["push_body"], url)
             log_notification(urun_id, email, "price_drop", event_key, yeni_fiyat)
         else:
