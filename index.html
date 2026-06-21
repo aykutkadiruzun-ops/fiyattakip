@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -443,6 +444,7 @@
     .field input:focus, .field select:focus { border-color: var(--muted); }
     .field input::placeholder { color: var(--faint); }
     .field-error { display:none; margin-top:6px; font-size:11px; color:var(--danger); line-height:1.35; }
+    .field-error.show { display:block; }
     .field.error input { border-color: var(--danger); background: var(--danger-bg); }
     .field.error .field-error { display:block; }
 
@@ -765,8 +767,8 @@
     <div style="padding:24px 0 8px">
   <div style="position:relative;display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:6px 6px 6px 18px;transition:border-color .2s"
     id="quick-capture-wrap">
-    <input type="url" id="quick-url" placeholder="Ürün linkini yapıştır…"
-      oninput="const v=this.value.trim();const btn=document.getElementById('quick-add-btn');btn.style.background=v?'var(--text)':'transparent';btn.style.color=v?'var(--bg)':'var(--faint)';"
+    <input type="url" id="quick-url" placeholder="Ürün linkini yapıştır…" aria-describedby="quick-url-error"
+      oninput="const v=this.value.trim();const btn=document.getElementById('quick-add-btn');btn.style.background=v?'var(--text)':'transparent';btn.style.color=v?'var(--bg)':'var(--faint)';setQuickUrlError('');"
       onfocus="document.getElementById('quick-capture-wrap').style.borderColor='var(--muted)'"
       onblur="document.getElementById('quick-capture-wrap').style.borderColor='var(--border)'"
       onkeydown="if(event.key==='Enter')quickAdd()"
@@ -776,6 +778,7 @@
       Rafta'ya Kaydet
     </button>
   </div>
+  <div class="field-error" id="quick-url-error" role="alert"></div>
 </div>
     <div class="greeting">
       <div class="page-eyebrow" id="home-date"></div>
@@ -1005,7 +1008,7 @@
     <!-- ADIM 1: Link + ayarlar -->
     <div id="modal-step-1">
       <h3 id="add-product-title">Rafına ekle</h3>
-      <div class="field"><label>Ürün linki</label><input type="url" id="new-url" placeholder="Trendyol, Bershka, Zara, H&M…" /></div>
+      <div class="field" id="new-url-field"><label>Ürün linki</label><input type="url" id="new-url" placeholder="Trendyol, Bershka, Zara, H&M…" aria-describedby="new-url-error" oninput="setProductUrlError('')" /><div class="field-error" id="new-url-error" role="alert"></div></div>
       <div class="field">
         <label>Koleksiyon (opsiyonel)</label>
         <input type="text" id="new-koleksiyon" placeholder="örn. Yaz koleksiyonu…" list="koleksiyon-list" />
@@ -1220,6 +1223,37 @@ window.showToast = (msg, type='') => {
     t.textContent = '';
   }, 2500);
 };
+
+window.setProductUrlError = (message = '') => {
+  const field = document.getElementById('new-url-field');
+  const input = document.getElementById('new-url');
+  const error = document.getElementById('new-url-error');
+  if (!field || !input || !error) return;
+  error.textContent = message;
+  field.classList.toggle('error', Boolean(message));
+  if (message) input.setAttribute('aria-invalid', 'true');
+  else input.removeAttribute('aria-invalid');
+};
+
+window.setQuickUrlError = (message = '') => {
+  const wrap = document.getElementById('quick-capture-wrap');
+  const input = document.getElementById('quick-url');
+  const error = document.getElementById('quick-url-error');
+  if (!wrap || !input || !error) return;
+  error.textContent = message;
+  error.classList.toggle('show', Boolean(message));
+  wrap.style.borderColor = message ? 'var(--danger)' : 'var(--border)';
+  if (message) input.setAttribute('aria-invalid', 'true');
+  else input.removeAttribute('aria-invalid');
+};
+
+function friendlyProductInsertError(error) {
+  const raw = `${error?.message || ''} ${error?.code || ''} ${error?.details || ''}`.toLowerCase();
+  if (raw.includes('duplicate key value') || raw.includes('23505') || raw.includes('urunler_url_unique')) {
+    return 'Bu ürün zaten rafında var.';
+  }
+  return 'Ürün eklenemedi. Biraz sonra tekrar dene.';
+}
 
 const parsePrice = n => {
   if (!n) return null;
@@ -1543,8 +1577,15 @@ window.goBack = () => {
 };
 window.quickAdd = () => {
   const val = document.getElementById('quick-url').value.trim();
+  setQuickUrlError('');
   if (val) {
-    document.getElementById('new-url').value = val;
+    const validation = validateProductUrl(val);
+    if (!validation.ok) {
+      setQuickUrlError(validation.message);
+      document.getElementById('quick-url')?.focus();
+      return;
+    }
+    document.getElementById('new-url').value = validation.url;
     document.getElementById('quick-url').value = '';
   }
   openModal();
@@ -1577,10 +1618,12 @@ window.goPage = name => {
 // Modal
 window.openModal  = () => {
   hideToast();
+  setProductUrlError('');
   document.getElementById('modal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('new-url')?.focus(), 150);
 };
 window.closeModal = () => {
+  setProductUrlError('');
   document.getElementById('modal-overlay').classList.remove('open');
   setTimeout(() => {
     document.getElementById('modal-step-1').style.display = '';
@@ -2035,7 +2078,13 @@ let currentAddedId = null;
 window.addProduct = async () => {
   const rawUrl = document.getElementById('new-url').value.trim();
   const validation = validateProductUrl(rawUrl);
-  if (!validation.ok) { showToast(validation.message,'error'); return; }
+  setProductUrlError('');
+  if (!validation.ok) {
+    setProductUrlError(validation.message);
+    showToast(validation.message,'error');
+    document.getElementById('new-url')?.focus();
+    return;
+  }
   const url = validation.url;
   const btn = document.getElementById('btn-add');
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
@@ -2052,7 +2101,12 @@ window.addProduct = async () => {
   }]).select().single();
 
   btn.innerHTML='Rafta\'ya Kaydet'; btn.disabled=false;
-  if (error) { showToast('Eklenemedi: '+error.message,'error'); return; }
+  if (error) {
+    const friendlyError = friendlyProductInsertError(error);
+    setProductUrlError(friendlyError);
+    showToast(friendlyError,'error');
+    return;
+  }
 
   currentAddedId = data.id;
 
