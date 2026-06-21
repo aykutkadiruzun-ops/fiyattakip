@@ -430,6 +430,39 @@ def test_build_target_reached_notification_is_hero_message():
     assert "Sakin ve veriye dayalı bir bildirim" in content["html"]
 
 
+def test_build_initial_price_notification_starts_tracking_trust():
+    from takip import build_notification_content
+
+    content = build_notification_content(
+        event_type="initial_price",
+        urun_adi="Adidas Courtblock Shoes",
+        eski_fiyat=None,
+        yeni_fiyat="3.299,00 TL",
+        url="https://example.com/shoes",
+    )
+
+    assert content["subject"] == "🎉 Takip başladı: Adidas Courtblock Shoes"
+    assert content["push_title"] == "🎉 Takip başladı"
+    assert content["push_body"] == "Adidas Courtblock Shoes artık takipte. İlk fiyat: 3.299,00 TL."
+    assert "Artık bu ürünü senin yerine takip ediyoruz" in content["html"]
+
+
+def test_price_drop_notifications_send_for_any_real_drop():
+    from takip import build_notification_content, is_significant_price_drop
+
+    assert is_significant_price_drop("100 TL", "99,99 TL") is True
+    assert build_notification_content(
+        event_type="price_drop",
+        urun_adi="Siyah Elbise",
+        eski_fiyat="100 TL",
+        yeni_fiyat="99,99 TL",
+        url="https://example.com/p",
+    )["subject"] == "📉 Güzel haber: Siyah Elbise 0,01 TL ucuzladı"
+    assert is_significant_price_drop("100 TL", "98 TL") is True
+    assert is_significant_price_drop("100 TL", "100 TL") is False
+    assert is_significant_price_drop("100 TL", "101 TL") is False
+
+
 def test_extract_trendyol_embedded_json_price_and_name():
     from takip import extract_product_data
 
