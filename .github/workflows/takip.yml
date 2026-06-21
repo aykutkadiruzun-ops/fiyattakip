@@ -25,7 +25,22 @@ on:
         description: 'Bu run icinde en fazla kac urunde Playwright denensin?'
         required: false
         default: '3'
+jobs:
+  deploy-edge-function:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Edge Function deploy et
+        run: supabase functions deploy fiyat-guncelle --project-ref uwxfrbljvmwtxecnqgrl
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+  takip:
+    needs: deploy-edge-function
+    runs-on: ubuntu-latest
 jobs:
   takip:
     runs-on: ubuntu-latest
