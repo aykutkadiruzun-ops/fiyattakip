@@ -389,6 +389,47 @@ def test_log_notification_writes_event_key():
     assert calls[0][1]["fiyat"] == "729,95 TL"
 
 
+def test_build_price_drop_notification_content_uses_rafta_voice_not_clickbait():
+    from takip import build_notification_content
+
+    content = build_notification_content(
+        event_type="price_drop",
+        urun_adi="Siyah Elbise",
+        eski_fiyat="2.499,00 TL",
+        yeni_fiyat="2.379,00 TL",
+        url="https://example.com/p",
+        hedef_fiyat="2.199,00 TL",
+    )
+
+    assert content["subject"] == "📉 Güzel haber: Siyah Elbise 120 TL ucuzladı"
+    assert content["push_title"] == "📉 Güzel haber"
+    assert content["push_body"] == "Siyah Elbise bugün 120 TL düştü. Hedef fiyatına 180 TL kaldı."
+    assert "Hedef fiyatına 180 TL kaldı" in content["html"]
+    assert "Ürünü kontrol et" in content["html"]
+    joined = (content["subject"] + content["push_title"] + content["push_body"] + content["html"]).lower()
+    for banned in ["fırsatı kaçırma", "hemen al", "son şans", "kaçırmadan"]:
+        assert banned not in joined
+
+
+def test_build_target_reached_notification_is_hero_message():
+    from takip import build_notification_content
+
+    content = build_notification_content(
+        event_type="target_reached",
+        urun_adi="Siyah Krep Elbise",
+        eski_fiyat="1.250 TL",
+        yeni_fiyat="899 TL",
+        url="https://example.com/z",
+        hedef_fiyat="900 TL",
+    )
+
+    assert content["subject"] == "🎯 Beklediğin an geldi: Siyah Krep Elbise"
+    assert content["push_title"] == "🎯 Beklediğin an geldi"
+    assert content["push_body"] == "Siyah Krep Elbise artık hedef fiyatında. Güncel fiyat: 899 TL."
+    assert "Ürün artık istediğin fiyatta" in content["html"]
+    assert "Sakin ve veriye dayalı bir bildirim" in content["html"]
+
+
 def test_extract_trendyol_embedded_json_price_and_name():
     from takip import extract_product_data
 
