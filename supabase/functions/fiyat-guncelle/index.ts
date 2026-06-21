@@ -57,11 +57,48 @@ Deno.serve(async (req) => {
     const nameMatch = html.match(/<h1[^>]*>([^<]{5,100})<\/h1>/);
     if (nameMatch) urun_adi = nameMatch[1].trim();
 
+    // Mail gönder — fiyattan bağımsız, ürün eklenince her zaman
+    const RESEND_KEY = Deno.env.get("RESEND_KEY") || "";
+    if (RESEND_KEY && urun.email) {
+      const isIlkFiyat = !urun.son_fiyat;
+      const subject = isIlkFiyat
+        ? `🎉 Rafta'ya kaydedildi: ${urun_adi || 'Ürün'}`
+        : `📉 Fiyat güncellendi: ${urun_adi || 'Ürün'}`;
+      const htmlBody = `
+        <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:28px 18px;background:#FAFAF8">
+          <div style="font-size:24px;font-weight:700;margin-bottom:18px">rafta<span style="color:#888">.</span></div>
+          <div style="background:#fff;border:1px solid #E8E6DF;border-radius:20px;padding:24px">
+            <h1 style="font-size:22px;margin:0 0 10px">${isIlkFiyat ? '🎉 Rafta\'ya kaydedildi' : '📉 Fiyat güncellendi'}</h1>
+            <p style="color:#555;font-size:15px">${urun_adi || 'Ürün'}</p>
+            ${fiyat ? `
+            <div style="background:#EBF4E5;border-radius:14px;padding:14px;margin:16px 0">
+              <div style="font-size:11px;color:#2D6A2D;text-transform:uppercase">Güncel fiyat</div>
+              <div style="font-size:26px;font-weight:800;color:#2D6A2D">${fiyat}</div>
+            </div>` : `
+            <div style="background:#F6F3EA;border-radius:14px;padding:14px;margin:16px 0;color:#3A3428;font-size:14px">
+              Ürün bilgileri alınıyor. İlk fiyat kontrolünden sonra güncellenecek.
+            </div>`}
+            <a href="${urun.url}" style="display:block;text-align:center;background:#111;color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:700">Ürünü görüntüle</a>
+            <p style="font-size:12px;color:#888;margin-top:16px">Bu bildirim Rafta fiyat takip tercihlerine göre gönderildi.</p>
+          </div>
+        </div>
+      `;
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + RESEND_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: "bildirim@rafta.net", to: urun.email, subject, html: htmlBody }),
+      });
+    }
+
     if (fiyat) {
       const updateData: Record<string, unknown> = { son_fiyat: fiyat, guncelleme_istegi: false };
       if (urun_adi) updateData.urun_adi = urun_adi;
       await sb.from("urunler").update(updateData).eq("id", urun_id);
       await sb.from("fiyat_gecmisi").insert({ urun_id, fiyat });
+      return Response.json({ success: true, fiyat }, { headers: corsHeaders });
+    } else {
+      return Response.json({ message: "Fiyat çekilemedi." }, { headers: corsHeaders });
+    } });
 
       // Mail gönder
       const RESEND_KEY = Deno.env.get("RESEND_KEY") || "";
