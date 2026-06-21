@@ -1,5 +1,4 @@
 name: Fiyat Takip
-
 on:
   schedule:
     - cron: '0 5,10,17 * * *'
@@ -37,31 +36,23 @@ jobs:
         run: supabase functions deploy fiyat-guncelle --project-ref uwxfrbljvmwtxecnqgrl
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
   takip:
     needs: deploy-edge-function
     runs-on: ubuntu-latest
-jobs:
-  takip:
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Python kur
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Bagimliliklari kur
         run: pip install -r requirements.txt
-
       - name: Playwright kur (manuel fallback aciksa)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_playwright == 'true' }}
         run: |
           pip install playwright
           playwright install chromium
           playwright install-deps chromium
-
       - name: Fiyatlari kontrol et
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
