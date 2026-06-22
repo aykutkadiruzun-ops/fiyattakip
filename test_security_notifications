@@ -1,0 +1,65 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+EDGE = ROOT / "supabase" / "functions" / "fiyat-guncelle" / "index.ts"
+INDEX = ROOT / "index.html"
+
+
+def read(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def test_edge_function_does_not_contain_hardcoded_scraper_key():
+    text = read(EDGE)
+    assert "e69fb8c04518138c28881d88931b8e14" not in text
+    assert 'Deno.env.get("SCRAPER_KEY") ||' not in text
+    assert "SCRAPER_KEY eksik" in text
+
+
+def test_edge_function_requires_authenticated_owner_before_updating_product():
+    text = read(EDGE)
+    assert "auth.getUser" in text
+    assert "Kullanıcı doğrulanamadı" in text
+    assert '.eq("email", user.email)' in text
+
+
+def test_edge_function_mail_only_for_initial_price_or_real_price_drop():
+    text = read(EDGE)
+    assert "fiyattan bağımsız, her zaman" not in text
+    assert "shouldSendMail" in text
+    assert "isInitialPrice" in text
+    assert "isPriceDrop" in text
+    assert "price_drop" in text
+    assert "initial_price" in text
+    assert "target_reached" not in text  # hedef mailini zamanlanmış takip.py yönetecek
+
+
+def test_edge_function_logs_notifications_to_prevent_duplicate_mails():
+    text = read(EDGE)
+    assert "bildirim_loglari" in text
+    assert "event_key" in text
+    assert "shouldSendNotification" in text
+    assert "logNotification" in text
+
+
+def test_workflow_sets_edge_function_runtime_secrets_before_deploy():
+    text = read(ROOT / ".github" / "workflows" / "takip.yml")
+    assert "supabase secrets set" in text
+    assert "SERVICE_KEY: ${{ secrets.SUPABASE_KEY }}" in text
+    assert "SCRAPER_KEY: ${{ secrets.SCRAPER_KEY }}" in text
+    assert "RESEND_KEY: ${{ secrets.RESEND_KEY }}" in text
+
+
+def test_login_errors_are_translated_to_turkish():
+    text = read(INDEX)
+    assert "friendlyAuthError" in text
+    assert "E-posta veya şifre hatalı" in text
+    assert "invalid login credentials" in text.lower()
+
+
+if __name__ == "__main__":
+    tests = [v for k, v in globals().items() if k.startswith("test_") and callable(v)]
+    for test in tests:
+        test()
+        print(f"PASS {test.__name__}")
+    print(f"{len(tests)} tests passed")
