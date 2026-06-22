@@ -213,15 +213,18 @@ Deno.serve(async (req) => {
 
     const isInitialPrice = !urun.son_fiyat;
 
-    if (urun.url.includes("trendyol.com")) {
-      if (isInitialPrice) {
-        const eventType = "initial_price";
-        const eventKey = notificationEventKey(urun.id, eventType, "added");
-        if (await shouldSendNotification(sb, urun.id, eventType, eventKey)) {
-          const sent = await sendMail(urun.email, eventType, urun.urun_adi || "Ürün", null, null, urun.url);
-          if (sent) await logNotification(sb, urun.id, urun.email, eventType, eventKey, null);
-        }
+    // Ürün ekleme maili scraper sonucuna bağlı olmamalı.
+    // Kullanıcı ürünü kaydettiyse, fiyat çekilemese bile "Takip başladı" maili gider.
+    if (isInitialPrice) {
+      const eventType = "initial_price";
+      const eventKey = notificationEventKey(urun.id, eventType, "added");
+      if (await shouldSendNotification(sb, urun.id, eventType, eventKey)) {
+        const sent = await sendMail(urun.email, eventType, urun.urun_adi || "Ürün", null, null, urun.url);
+        if (sent) await logNotification(sb, urun.id, urun.email, eventType, eventKey, null);
       }
+    }
+
+    if (urun.url.includes("trendyol.com")) {
       return jsonResponse({ message: "Trendyol için sonraki zamanlanmış güncelleme bekleniyor." });
     }
 
@@ -230,7 +233,7 @@ Deno.serve(async (req) => {
     const oldNum = parsePrice(oldPrice);
     const newNum = parsePrice(fiyat);
     const isPriceDrop = oldNum !== null && newNum !== null && newNum < oldNum;
-    const shouldSendMail = isInitialPrice || isPriceDrop;
+    const shouldSendMail = isPriceDrop;
 
     if (fiyat) {
       const updateData: Record<string, unknown> = { son_fiyat: fiyat, guncelleme_istegi: false };
