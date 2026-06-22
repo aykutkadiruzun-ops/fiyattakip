@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -1353,6 +1354,16 @@ window.switchTab = tab => {
   ['auth-error','auth-success'].forEach(id => document.getElementById(id).style.display='none');
 };
 
+function friendlyAuthError(message) {
+  const text = String(message || '').toLowerCase();
+  if (text.includes('invalid login credentials')) return 'E-posta veya şifre hatalı.';
+  if (text.includes('email not confirmed')) return 'E-postanı doğrulaman gerekiyor.';
+  if (text.includes('signup disabled')) return 'Kayıt şu anda kapalı.';
+  if (text.includes('user already registered') || text.includes('already registered')) return 'Bu e-posta ile zaten hesap oluşturulmuş.';
+  if (text.includes('password')) return 'Şifre bilgilerini kontrol et.';
+  return message || 'Bir hata oluştu.';
+}
+
 window.doLogin = async () => {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
@@ -1361,7 +1372,7 @@ window.doLogin = async () => {
   btn.innerHTML='<span class="spinner"></span>'; btn.disabled=true;
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   btn.innerHTML='Giriş yap'; btn.disabled=false;
-  if (error) showErr(error.message);
+  if (error) showErr(friendlyAuthError(error.message));
 };
 
 window.doSignup = async () => {
@@ -1377,7 +1388,7 @@ window.doSignup = async () => {
     options: { data: { full_name: name || email.split('@')[0] } }
   });
   btn.innerHTML='Hesap oluştur'; btn.disabled=false;
-  if (error) { showErr(error.message); return; }
+  if (error) { showErr(friendlyAuthError(error.message)); return; }
   const ok = document.getElementById('auth-success');
   ok.textContent='Hesap oluşturuldu! E-postanı doğrula.'; ok.style.display='block';
 };
